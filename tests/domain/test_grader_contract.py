@@ -1,0 +1,132 @@
+from __future__ import annotations
+
+import pytest
+
+from eval_lab.domain.grader_contract import (
+    normalize_grader_payload,
+    validate_grader_payload,
+)
+
+
+def valid_payload() -> dict[str, object]:
+    return {
+        "language_compliance": {
+            "label": "pass",
+            "reason": "The response is in the requested language.",
+            "evidence": "All visible response fields are Chinese.",
+        },
+        "required_facts": [
+            {
+                "fact_id": "F01",
+                "label": "met",
+                "output_evidence": "The launch date is September 9.",
+                "reason": "The required date appears in the output.",
+            },
+            {
+                "fact_id": "F02",
+                "label": "not_met",
+                "output_evidence": "Evidence was not found in the output.",
+                "reason": "The location is absent.",
+            },
+        ],
+        "unsupported_claims": [],
+        "readability": {
+            "label": "pass",
+            "reason": "The response is easy to scan.",
+            "evidence": "Short paragraphs and complete sentences.",
+        },
+        "primary_error_type": None,
+        "secondary_error_types": [],
+        "grader_reason": "The response follows the semantic checks.",
+    }
+
+
+def test_normalizes_a_valid_allowlisted_payload_into_a_new_mapping() -> None:
+    payload = valid_payload()
+    payload["grader_reason"] = "  The response follows the semantic checks.  "
+
+    normalized = normalize_grader_payload(payload, ["F01", "F02"])
+
+    assert normalized == valid_payload()
+    assert normalized is not payload
+    assert normalized["language_compliance"] is not payload["language_compliance"]
+
+
+def test_rejects_missing_and_duplicate_required_fact_ids() -> None:
+    missing = valid_payload()
+    missing["required_facts"] = [missing["required_facts"][0]]
+    duplicate = valid_payload()
+    duplicate["required_facts"] = [
+        duplicate["required_facts"][0],
+        duplicate["required_facts"][0],
+    ]
+
+    assert any("exactly once" in error for error in validate_grader_payload(missing, ["F01", "F02"]))
+    assert any("duplicates" in error for error in validate_grader_payload(duplicate, ["F01", "F02"]))
+
+
+def test_rejects_invalid_labels_and_unsupported_fact_ids() -> None:
+    payload = valid_payload()
+    payload["language_compliance"]["label"] = "approved"  # type: ignore[index]
+    payload["required_facts"][1]["fact_id"] = "F03"  # type: ignore[index]
+
+    errors = validate_grader_payload(payload, ["F01", "F02"])
+
+    assert any("language_compliance.label" in error for error in errors)
+    assert any("unsupported fact_id" in error for error in errors)
+
+
+def test_requires_evidence_and_reason_for_facts_including_indeterminate() -> None:
+    payload = valid_payload()
+    payload["required_facts"][0]["output_evidence"] = " "  # type: ignore[index]
+    payload["required_facts"][1] = {
+        "fact_id": "F02",
+        "label": "indeterminate",
+        "output_evidence": " ",
+        "reason": " ",
+    }
+
+    errors = validate_grader_payload(payload, ["F01", "F02"])
+
+    assert any("required_facts[0].output_evidence" in error for error in errors)
+    assert any("required_facts[1].reason" in error for error in errors)
+    assert any("required_facts[1].output_evidence" in error for error in errors)
+
+
+def test_rejects_malformed_unsupported_claims_and_blind_metadata() -> None:
+    malformed = valid_payload()
+    malformed["unsupported_claims"] = [
+        {
+            "claim": "Market leader",
+            "output_evidence": "We are the market leader.",
+            "supporting_fact_ids": "F01",
+            "reason": "No support was supplied.",
+        }
+    ]
+    blind_metadata = valid_payload()
+    blind_metadata["prompt_version"] = "v2"
+
+    assert any(
+        "supporting_fact_ids" in error
+        for error in validate_grader_payload(malformed, ["F01", "F02"])
+    )
+    assert any("unsupported keys" in error for error in validate_grader_payload(blind_metadata, ["F01", "F02"]))
+    with pytest.raises(ValueError):
+        normalize_grader_payload(blind_metadata, ["F01", "F02"])
+
+
+def test_language_hard_criterion_requires_complete_evidence() -> None:
+    payload = valid_payload()
+    payload["language_compliance"] = {
+        "label": "fail",
+        "reason": "The output switches languages.",
+        "evidence": "The summary contains English sentences.",
+    }
+
+    assert validate_grader_payload(payload, ["F01", "F02"]) == []
+
+    payload["language_compliance"]["evidence"] = " "  # type: ignore[index]
+    assert any(
+        "language_compliance.evidence" in error
+        for error in validate_grader_payload(payload, ["F01", "F02"])
+    )
