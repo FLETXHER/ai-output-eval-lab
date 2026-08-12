@@ -114,7 +114,7 @@ def output_data(run_id: int, test_case_id: int) -> dict[str, object]:
         "candidate_id": "candidate-a1b2c3",
         "generation_packet_version": "generation-packet-v1",
         "generation_packet_hash": "generation-packet-hash",
-        "raw_response": '{"title":"随身灯","summary":"星河牌随身灯重量为120克，包装含USB-C充电线。","key_points":["重量为120克","包装含USB-C充电线","适合随身携带"]}',
+        "raw_response": '\n {"title":"随身灯","summary":"星河牌随身灯重量为120克，包装含USB-C充电线。","key_points":["重量为120克","包装含USB-C充电线","适合随身携带"]} \n',
         "output_hash": "output-hash",
         "generated_at": NOW,
         "technical_retry_count": 0,
@@ -205,12 +205,36 @@ def test_parent_child_inserts_json_round_trips_and_freeze_lifecycle(initialized_
 def test_output_provenance_retries_and_raw_response_round_trip(initialized_connection: sqlite3.Connection) -> None:
     _, _, _, model_output_id, _, _ = make_output_graph(initialized_connection)
     response = fetch_raw_response(initialized_connection, model_output_id)
-    assert response is not None and response.startswith('{"title"')
+    assert response == output_data(1, 1)["raw_response"]
     update_technical_retry(initialized_connection, model_output_id, "network error")
     update_technical_retry(initialized_connection, model_output_id, "page failed to load")
     row = initialized_connection.execute("SELECT technical_retry_reasons_json FROM model_outputs WHERE id = ?", (model_output_id,)).fetchone()
     assert fetch_retry_count(initialized_connection, model_output_id) == 2
     assert json.loads(row[0]) == ["network error", "page failed to load"]
+
+
+@pytest.mark.parametrize("missing_field", ["generation_packet_version", "generation_packet_hash"])
+def test_model_output_insert_requires_generation_packet_provenance(
+    initialized_connection: sqlite3.Connection, missing_field: str
+) -> None:
+    _, test_case_id, run_id, _, _, _ = make_output_graph(initialized_connection)
+    data = output_data(run_id, test_case_id)
+    data.pop(missing_field)
+
+    with pytest.raises(KeyError, match=missing_field):
+        insert_model_output_slot(initialized_connection, data)
+
+
+@pytest.mark.parametrize("missing_field", ["blind_packet_version", "blind_packet_hash"])
+def test_grader_result_insert_requires_blind_packet_provenance(
+    initialized_connection: sqlite3.Connection, missing_field: str
+) -> None:
+    _, _, _, model_output_id, grader_condition_id, _ = make_output_graph(initialized_connection)
+    data = grader_result_data(model_output_id, grader_condition_id)
+    data.pop(missing_field)
+
+    with pytest.raises(KeyError, match=missing_field):
+        insert_grader_result(initialized_connection, data)
 
 
 def test_rule_grader_and_evaluation_children_round_trip(initialized_connection: sqlite3.Connection) -> None:
