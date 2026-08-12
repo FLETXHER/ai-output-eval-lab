@@ -323,6 +323,10 @@ def test_blind_grader_builder_is_repeatable_and_persists_grader_provenance(
     exposed = first["text"] + json.dumps(first["payload"], ensure_ascii=False)
     for allowed in ("F01", "逐项检查候选回答。", "missing_fact | unsupported_claim"):
         assert allowed in exposed
+    assert set(first["payload"]["constraints"]) == {
+        "task_instructions",
+        "explicit_forbidden_claims",
+    }
     for forbidden in (
         "v2-FORBIDDEN",
         "holdout",
@@ -354,6 +358,7 @@ def test_blind_human_review_builder_exposes_no_automatic_or_experiment_metadata(
         "fail",
         "indeterminate",
     ]
+    assert set(first["payload"]["constraints"]) == {"explicit_forbidden_claims"}
     exposed = first["text"] + json.dumps(first["payload"], ensure_ascii=False)
     for forbidden in (
         "v2-FORBIDDEN",

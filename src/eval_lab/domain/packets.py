@@ -68,7 +68,7 @@ def render_blind_grader_packet(
         "source_material": _required_string(source_material, "source_material"),
         "source_facts": facts,
         "required_fact_ids": required_ids,
-        "constraints": _canonical_copy(constraints),
+        "constraints": _visible_constraints(constraints),
         "raw_model_response": _required_string(
             raw_model_response, "raw_model_response", allow_empty=True
         ),
@@ -111,7 +111,7 @@ def render_blind_human_review_packet(
         "task_instructions": _required_string(
             task_instructions, "task_instructions", allow_empty=True
         ),
-        "constraints": _canonical_copy(constraints),
+        "constraints": _visible_constraints(constraints),
         "raw_model_response": _required_string(
             raw_model_response, "raw_model_response", allow_empty=True
         ),
@@ -204,9 +204,10 @@ def _language_name(value: object) -> str:
 
 def _validate_anonymous_candidate_id(candidate_id: str) -> None:
     candidate = _required_string(candidate_id, "candidate_id")
-    tokens = [token for token in re.split(r"[^a-z0-9]+", candidate.casefold()) if token]
-    if any(token in {"dev", "holdout"} or re.fullmatch(r"v\d+", token) for token in tokens):
-        raise ValueError("candidate_id must be anonymous and not encode version or split")
+    if re.fullmatch(r"candidate-[0-9a-f]{6,64}", candidate) is None:
+        raise ValueError(
+            "candidate_id must use the anonymous opaque format candidate-<lowercase hex>"
+        )
 
 
 def _render_sections(
@@ -244,8 +245,23 @@ def _canonical_json(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
-def _canonical_copy(value: object) -> object:
-    return json.loads(_canonical_json(value))
+def _visible_constraints(constraints: Mapping[str, object]) -> dict[str, object]:
+    """Copy only the two Case constraint fields approved for blind contexts."""
+    visible: dict[str, object] = {}
+    if "task_instructions" in constraints:
+        visible["task_instructions"] = _required_string(
+            constraints["task_instructions"], "constraints.task_instructions", allow_empty=True
+        )
+
+    if "explicit_forbidden_claims" in constraints:
+        claims = constraints["explicit_forbidden_claims"]
+        if not isinstance(claims, Sequence) or isinstance(claims, (str, bytes)):
+            raise ValueError("constraints.explicit_forbidden_claims must be a sequence")
+        visible["explicit_forbidden_claims"] = [
+            _required_string(claim, "constraints.explicit_forbidden_claims item")
+            for claim in claims
+        ]
+    return visible
 
 
 def _packet(version: str, text: str, payload: dict[str, object]) -> dict[str, object]:

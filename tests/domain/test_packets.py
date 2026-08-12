@@ -159,6 +159,8 @@ def test_blind_grader_packet_contains_all_and_only_required_context() -> None:
     constraints = {
         "task_instructions": "标题需突出启动日期",
         "explicit_forbidden_claims": ["全球首发"],
+        "calculated_status": "LEAK_STATUS",
+        "prompt_version": "LEAK_VERSION",
     }
     raw_response = '{"title":"九月九日启动","summary":"原样回答"}'
 
@@ -191,7 +193,10 @@ def test_blind_grader_packet_contains_all_and_only_required_context() -> None:
     assert payload["candidate_id"] == "candidate-a7f3c2"
     assert payload["source_facts"] == source_facts
     assert payload["required_fact_ids"] == required_fact_ids
-    assert payload["constraints"] == constraints
+    assert payload["constraints"] == {
+        "task_instructions": "标题需突出启动日期",
+        "explicit_forbidden_claims": ["全球首发"],
+    }
     assert payload["raw_model_response"] == raw_response
     for allowed in (
         "candidate-a7f3c2",
@@ -208,6 +213,8 @@ def test_blind_grader_packet_contains_all_and_only_required_context() -> None:
         "FORBIDDEN_CONTRACT_HASH",
         "FORBIDDEN_ANALYSIS",
         "FORBIDDEN_PRIOR_GRADER_RESULT",
+        "LEAK_STATUS",
+        "LEAK_VERSION",
     ):
         assert forbidden not in packet["text"]
         assert forbidden not in json.dumps(payload, ensure_ascii=False)
@@ -238,7 +245,15 @@ def test_blind_packet_text_losslessly_encodes_raw_whitespace_without_rendered_tr
 
 
 @pytest.mark.parametrize(
-    "candidate_id", ["candidate-v1", "candidate_v2_001", "dev-candidate", "candidate-holdout"]
+    "candidate_id",
+    [
+        "candidate-v1",
+        "candidate_v2_001",
+        "dev-candidate",
+        "candidate-holdout",
+        "candidate-hold-out",
+        "candidate-version-2",
+    ],
 )
 def test_blind_packets_reject_candidate_ids_that_encode_version_or_split(
     candidate_id: str,
@@ -264,7 +279,11 @@ def test_blind_human_review_packet_has_a_separate_strict_allowlist() -> None:
         candidate_id="candidate-b93de1",
         source_material="仅供复核的来源材料",
         task_instructions="只依据来源，并以简体中文作答。",
-        constraints={"explicit_forbidden_claims": ["行业第一"]},
+        constraints={
+            "explicit_forbidden_claims": ["行业第一"],
+            "calculated_status": "LEAK_STATUS",
+            "prompt_version": "LEAK_VERSION",
+        },
         raw_model_response=raw_response,
         human_review_rubric="独立判断事实和格式是否满足任务。",
         decision_options=["pass", "fail", "indeterminate"],
@@ -280,6 +299,9 @@ def test_blind_human_review_packet_has_a_separate_strict_allowlist() -> None:
         "decision_options",
     ]
     assert packet["payload"]["raw_model_response"] == raw_response
+    assert packet["payload"]["constraints"] == {
+        "explicit_forbidden_claims": ["行业第一"]
+    }
     exposed = packet["text"] + json.dumps(packet["payload"], ensure_ascii=False)
     for allowed in (
         "candidate-b93de1",
@@ -310,4 +332,6 @@ def test_blind_human_review_packet_has_a_separate_strict_allowlist() -> None:
     ):
         assert forbidden_key not in packet["payload"]
         assert forbidden_key not in packet["text"]
+    assert "LEAK_STATUS" not in exposed
+    assert "LEAK_VERSION" not in exposed
     _assert_exact_text_hash(packet)
