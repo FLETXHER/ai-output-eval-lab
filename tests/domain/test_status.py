@@ -86,6 +86,78 @@ def test_language_indeterminate_keeps_result_indeterminate() -> None:
     assert result["blocking_reasons"] == ["language compliance is indeterminate"]
 
 
+def test_valid_language_failure_fails_calculated_status() -> None:
+    result = aggregate_calculated_status(
+        [{"rule_key": "schema_pass", "status": "pass"}],
+        valid_grader(
+            language_compliance={
+                "label": "fail",
+                "reason": "The output switches languages.",
+                "evidence": "The summary contains English sentences.",
+            }
+        ),
+        ["F01"],
+    )
+
+    assert result["calculated_status"] == "fail"
+
+
+def test_valid_missing_required_fact_fails_calculated_status() -> None:
+    result = aggregate_calculated_status(
+        [{"rule_key": "schema_pass", "status": "pass"}],
+        valid_grader(
+            required_facts=[
+                {
+                    "fact_id": "F01",
+                    "label": "not_met",
+                    "output_evidence": "Evidence was not found in the output.",
+                    "reason": "The date is absent.",
+                }
+            ]
+        ),
+        ["F01"],
+    )
+
+    assert result["calculated_status"] == "fail"
+
+
+def test_valid_indeterminate_required_fact_keeps_status_indeterminate() -> None:
+    result = aggregate_calculated_status(
+        [{"rule_key": "schema_pass", "status": "pass"}],
+        valid_grader(
+            required_facts=[
+                {
+                    "fact_id": "F01",
+                    "label": "indeterminate",
+                    "output_evidence": "Evidence was not found in the output.",
+                    "reason": "The output cannot be reliably read.",
+                }
+            ]
+        ),
+        ["F01"],
+    )
+
+    assert result["calculated_status"] == "indeterminate"
+
+
+def test_valid_diagnostics_do_not_affect_passing_status() -> None:
+    result = aggregate_calculated_status(
+        [{"rule_key": "schema_pass", "status": "pass"}],
+        valid_grader(
+            readability={
+                "label": "fail",
+                "reason": "Dense text.",
+                "evidence": "The summary is one long paragraph.",
+            },
+            primary_error_type="readability",
+            secondary_error_types=["style"],
+        ),
+        ["F01"],
+    )
+
+    assert result["calculated_status"] == "pass"
+
+
 def test_invalid_grader_payload_is_indeterminate_and_diagnostics_do_not_change_status() -> None:
     grader = valid_grader(
         required_facts=[],

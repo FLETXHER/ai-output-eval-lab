@@ -80,7 +80,7 @@ def validate_grader_payload(
 
     _validate_language(payload.get("language_compliance"), errors)
     _validate_facts(payload.get("required_facts"), required_ids, errors)
-    _validate_claims(payload.get("unsupported_claims"), errors)
+    _validate_claims(payload.get("unsupported_claims"), required_ids, errors)
     _validate_readability(payload.get("readability"), errors)
 
     primary_error_type = payload.get("primary_error_type")
@@ -152,7 +152,7 @@ def _validate_facts(value: object, required_ids: set[str], errors: list[str]) ->
         errors.append("required_facts must cover each required_fact_id exactly once")
 
 
-def _validate_claims(value: object, errors: list[str]) -> None:
+def _validate_claims(value: object, known_fact_ids: set[str], errors: list[str]) -> None:
     if not isinstance(value, list):
         errors.append("unsupported_claims must be a list")
         return
@@ -175,6 +175,13 @@ def _validate_claims(value: object, errors: list[str]) -> None:
             not _non_empty_string(fact_id) for fact_id in supporting_fact_ids
         ):
             errors.append(f"{prefix}.supporting_fact_ids must be a list of fact IDs")
+            continue
+        for fact_id in supporting_fact_ids:
+            normalized_id = fact_id.strip()
+            if normalized_id not in known_fact_ids:
+                errors.append(
+                    f"{prefix} has unsupported supporting_fact_id {normalized_id!r}"
+                )
 
 
 def _validate_readability(value: object, errors: list[str]) -> None:

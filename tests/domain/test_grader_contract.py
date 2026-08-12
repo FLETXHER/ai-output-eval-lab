@@ -115,6 +115,22 @@ def test_rejects_malformed_unsupported_claims_and_blind_metadata() -> None:
         normalize_grader_payload(blind_metadata, ["F01", "F02"])
 
 
+def test_rejects_unsupported_claim_supporting_fact_ids() -> None:
+    payload = valid_payload()
+    payload["unsupported_claims"] = [
+        {
+            "claim": "Market leader",
+            "output_evidence": "We are the market leader.",
+            "supporting_fact_ids": ["UNKNOWN"],
+            "reason": "The claim needs source support.",
+        }
+    ]
+
+    errors = validate_grader_payload(payload, ["F01", "F02"])
+
+    assert any("unsupported supporting_fact_id 'UNKNOWN'" in error for error in errors)
+
+
 def test_language_hard_criterion_requires_complete_evidence() -> None:
     payload = valid_payload()
     payload["language_compliance"] = {
