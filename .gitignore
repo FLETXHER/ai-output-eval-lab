@@ -4,6 +4,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .streamlit/
+.venv/
 *.sqlite
 *.sqlite3
 tmp_verify.sqlite
