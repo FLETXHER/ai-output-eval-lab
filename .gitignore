@@ -1,0 +1,9 @@
+.worktrees/
+.superpowers/sdd/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.streamlit/
+*.sqlite
+*.sqlite3
+tmp_verify.sqlite
