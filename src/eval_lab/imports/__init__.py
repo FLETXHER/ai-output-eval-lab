@@ -9,7 +9,7 @@ from typing import TypedDict
 
 class ValidationResult(TypedDict):
     ok: bool
-    value: dict[str, object] | None
+    value: object | None
     errors: list[str]
     raw_text: str | None
 
@@ -28,8 +28,8 @@ def parse_json_text(raw_text: str) -> object:
         return _invalid(["invalid JSON"], raw_text=raw_text)
 
 
-def valid(value: Mapping[str, object]) -> ValidationResult:
-    return {"ok": True, "value": deepcopy(dict(value)), "errors": [], "raw_text": None}
+def valid(value: object) -> ValidationResult:
+    return {"ok": True, "value": deepcopy(value), "errors": [], "raw_text": None}
 
 
 def invalid(errors: list[str]) -> ValidationResult:

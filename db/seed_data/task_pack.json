@@ -1,0 +1,14 @@
+{
+  "pack_key": "grounded_structured_brief_generation",
+  "contract_version": "1.0",
+  "language": "zh-CN",
+  "root_keys": ["title", "summary", "key_points"],
+  "title_min_chars": 4,
+  "title_max_chars": 20,
+  "summary_min_chars": 60,
+  "summary_max_chars": 120,
+  "key_points_count": 3,
+  "key_point_min_chars": 6,
+  "key_point_max_chars": 40,
+  "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59"
+}
