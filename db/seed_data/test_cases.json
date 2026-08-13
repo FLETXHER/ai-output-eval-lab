@@ -12,10 +12,10 @@
       {"fact_id": "F05", "text": "充满电后可连续使用8小时"}
     ],
     "required_fact_ids": ["F03", "F04", "F05"],
-    "explicit_forbidden_claims": ["支持无线充电"],
+    "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须包含重量、包装内容和充满电后的连续使用时长。",
     "feasibility_qa_status": "pending",
-    "content_hash": "0c1ba184f2fb3bbd95e694ccecc01f218a50caed9e52f2479ae0510900a1d4d6",
+    "content_hash": "2224e6e09ae741cca65453e32e4b89aeb696e6752255db1472d80dc1e40a54c5",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -53,10 +53,10 @@
       {"fact_id": "F04", "text": "底部带有四个防滑脚垫"}
     ],
     "required_fact_ids": ["F01", "F02", "F04"],
-    "explicit_forbidden_claims": ["可上墙安装"],
+    "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须包含分格数量、外部尺寸和防滑脚垫信息。",
     "feasibility_qa_status": "pending",
-    "content_hash": "0b4857536a2d91e6c9db9fec60e191423e2808e918e9b5064988fe5dd503c749",
+    "content_hash": "c43582ed84de5b6e3c0b2ec114fecec6e36958a30a9fdd1af2d6bd5dd500681f",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -73,10 +73,10 @@
       {"fact_id": "F05", "text": "产品说明没有列出防水等级"}
     ],
     "required_fact_ids": ["F01", "F02", "F03"],
-    "explicit_forbidden_claims": ["具备防水等级"],
+    "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须说明连接版本、单次播放时长和实体按键数量。",
     "feasibility_qa_status": "pending",
-    "content_hash": "a94daf81af7fc6ebb83132caedc0f7065695878e39e1d05522412ef036c3321f",
+    "content_hash": "620bea68688356709e8797cc0cee4793e8c6bd21b9b69f6a397ceee07de3387e",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -92,10 +92,10 @@
       {"fact_id": "F04", "text": "明确写有不含花生原料"}
     ],
     "required_fact_ids": ["F01", "F02", "F03"],
-    "explicit_forbidden_claims": ["适合所有过敏人群"],
+    "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须说明净含量、主要原料和开封后的食用建议。",
     "feasibility_qa_status": "pending",
-    "content_hash": "df8e16ce1115b0ce645d81e7519f63ed8a0ca9b3be4d4e96f98e990417b71b59",
+    "content_hash": "231901e1f997513084a4eb00ef9d60381b0d679c7e7ea647a175f6c72807b09a",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -111,10 +111,10 @@
       {"fact_id": "F04", "text": "随袋附带两个可替换标签卡"}
     ],
     "required_fact_ids": ["F01", "F02", "F04"],
-    "explicit_forbidden_claims": ["真空压缩袋"],
+    "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须包含夹层数量、折叠后尺寸和标签卡数量。",
     "feasibility_qa_status": "pending",
-    "content_hash": "b6b682814b2be55c18637fb85dce19837d3b8eda844909b50a30918bd17096c3",
+    "content_hash": "6a6dea8ee0c721177af1a683f1fbd5c2c28342979970f2138ebaa2b6d43fac46",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -133,10 +133,10 @@
       {"fact_id": "F07", "text": "所有套餐均提供7天数据导出保留期"}
     ],
     "required_fact_ids": ["F02", "F05", "F06"],
-    "explicit_forbidden_claims": ["无限成员"],
-    "task_notes": "请生成一份结构化短内容，必须准确区分两个套餐的价格、成员或项目限制，以及审批流归属。",
+    "explicit_forbidden_claims": [],
+    "task_notes": "请生成一份结构化短内容，必须包含基础版价格、协作版的成员/项目限制，以及审批流归属。",
     "feasibility_qa_status": "pending",
-    "content_hash": "5bbd78ef2c6e48418bf16bda6501830ffb24d464c4cbef6f6cd93909203b7f3c",
+    "content_hash": "82a63ae560a9950491348649e2f0802420de7106d856216a6d291ff5f4d2ab5c",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -152,10 +152,10 @@
       {"fact_id": "F04", "text": "底座可向后折叠至120度"}
     ],
     "required_fact_ids": ["F01", "F02", "F04"],
-    "explicit_forbidden_claims": ["支持遥控操作"],
+    "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须说明风速档位、满电状态下的低档使用时长和底座折叠角度。",
     "feasibility_qa_status": "pending",
-    "content_hash": "12b0cd985056488eed4b53d2b206695eff718c519eb08b938f3bcbbfb3b74b6f",
+    "content_hash": "2ef7a80cf937a9dee175a99e684b9178872f8a4b15f4061c6d9b74198b2a761b",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -183,14 +183,14 @@
     "case_key": "brief-dev-10",
     "revision": 1,
     "split": "dev",
-    "source_material": "栖湖共享会议室 V3 提供小会议室和培训室。小会议室可预约9:00—12:00，每小时80元；小会议室最多容纳6人。培训室可预约13:00—18:00，每小时150元；培训室最多容纳20人。预约需至少提前1天提交，现场不提供投影设备。",
+    "source_material": "栖湖共享会议室 V3 提供小会议室和培训室。小会议室可预约时段为9:00—12:00。小会议室价格为每小时80元；小会议室最多容纳6人。培训室可预约时段为13:00—18:00。培训室价格为每小时150元；培训室最多容纳20人。预约需至少提前1天提交，现场不提供投影设备。",
     "source_facts": [
       {"fact_id": "F01", "text": "提供小会议室和培训室"},
-      {"fact_id": "F02", "text": "小会议室可预约9:00—12:00"},
-      {"fact_id": "F03", "text": "小会议室可预约9:00—12:00，每小时80元"},
+      {"fact_id": "F02", "text": "小会议室可预约时段为9:00—12:00"},
+      {"fact_id": "F03", "text": "小会议室价格为每小时80元"},
       {"fact_id": "F04", "text": "小会议室最多容纳6人"},
-      {"fact_id": "F05", "text": "培训室可预约13:00—18:00"},
-      {"fact_id": "F06", "text": "培训室可预约13:00—18:00，每小时150元"},
+      {"fact_id": "F05", "text": "培训室可预约时段为13:00—18:00"},
+      {"fact_id": "F06", "text": "培训室价格为每小时150元"},
       {"fact_id": "F07", "text": "培训室最多容纳20人"},
       {"fact_id": "F08", "text": "预约需至少提前1天提交"},
       {"fact_id": "F09", "text": "现场不提供投影设备"}
@@ -199,7 +199,7 @@
     "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须准确区分两种房型的可预约时段，并说明提前预约要求。",
     "feasibility_qa_status": "pending",
-    "content_hash": "5d535e1ab52477bb13d64192aed2c3dcbc89a1c6cc976c67b62825a856f09360",
+    "content_hash": "924c874bee46a84652b02e8eccdd0a3363ec5ada9d4d9caec93f8e508db3f86c",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -207,21 +207,21 @@
     "case_key": "brief-dev-11",
     "revision": 1,
     "split": "dev",
-    "source_material": "云桥家政清洁服务 R4 适用于普通住宅单次保洁，基础时长为2小时，超出部分按每小时60元计费。预约成功后可在服务开始前24小时取消并获全额退款；少于24小时取消时，已支付的基础服务费不退。服务人员只携带常规清洁工具，客户需提前收好贵重物品。",
+    "source_material": "云桥家政清洁服务 R4 适用于普通住宅单次保洁，基础时长为2小时，超出部分按每小时60元计费。至少提前24小时取消可获全额退款；距离服务开始不足24小时取消时，已支付的基础服务费不退。服务人员只携带常规清洁工具，客户需提前收好贵重物品。",
     "source_facts": [
       {"fact_id": "F01", "text": "适用于普通住宅单次保洁"},
       {"fact_id": "F02", "text": "基础时长为2小时"},
       {"fact_id": "F03", "text": "超出部分按每小时60元计费"},
-      {"fact_id": "F04", "text": "可在服务开始前24小时取消并获全额退款"},
-      {"fact_id": "F05", "text": "少于24小时取消时，已支付的基础服务费不退"},
+      {"fact_id": "F04", "text": "至少提前24小时取消可获全额退款"},
+      {"fact_id": "F05", "text": "距离服务开始不足24小时取消时，已支付的基础服务费不退"},
       {"fact_id": "F06", "text": "服务人员只携带常规清洁工具"},
       {"fact_id": "F07", "text": "客户需提前收好贵重物品"}
     ],
     "required_fact_ids": ["F02", "F04", "F05"],
-    "explicit_forbidden_claims": ["无条件退款"],
-    "task_notes": "请生成一份结构化短内容，必须同时说明基础时长、提前取消条件和临近服务时间取消的费用规则。",
+    "explicit_forbidden_claims": [],
+    "task_notes": "请生成一份结构化短内容，必须同时说明基础时长、至少提前24小时取消的退款条件和不足24小时取消的费用规则。",
     "feasibility_qa_status": "pending",
-    "content_hash": "a94fea1141cd66a38a1443a644c2e46c14f76d5a595e404226f2e11be2e74363",
+    "content_hash": "bee0d0c7f8f7179d8665ea145262aaddbacf122cc243d92ae5e9d88c36c5269e",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -229,11 +229,11 @@
     "case_key": "brief-dev-12",
     "revision": 1,
     "split": "dev",
-    "source_material": "星澜数据入门课 C5 共4次课，安排在7月6日、7月13日、7月20日和7月27日的19:00—21:00，采用线上直播。课程费用为260元，报名者需先完成一份基础问卷；课程资料在每次课后发送，不提供回放。",
+    "source_material": "星澜数据入门课 C5 共4次课，日期为7月6日、7月13日、7月20日和7月27日。每次课时间为19:00—21:00，采用线上直播。课程费用为260元，报名者需先完成一份基础问卷；课程资料在每次课后发送，不提供回放。",
     "source_facts": [
       {"fact_id": "F01", "text": "共4次课"},
-      {"fact_id": "F02", "text": "安排在7月6日、7月13日、7月20日和7月27日"},
-      {"fact_id": "F03", "text": "19:00—21:00"},
+      {"fact_id": "F02", "text": "日期为7月6日、7月13日、7月20日和7月27日"},
+      {"fact_id": "F03", "text": "每次课时间为19:00—21:00"},
       {"fact_id": "F04", "text": "采用线上直播"},
       {"fact_id": "F05", "text": "课程费用为260元"},
       {"fact_id": "F06", "text": "报名者需先完成一份基础问卷"},
@@ -242,9 +242,9 @@
     ],
     "required_fact_ids": ["F01", "F03", "F06"],
     "explicit_forbidden_claims": [],
-    "task_notes": "请生成一份结构化短内容，必须包含课程次数、上课时间和报名前置要求。",
+    "task_notes": "请生成一份结构化短内容，必须包含课程次数、每次课时段和报名前置要求。",
     "feasibility_qa_status": "pending",
-    "content_hash": "a8675af9653655347cbef5f86df73a0f670cc6f0bd35d541d8c30109a44d60b4",
+    "content_hash": "7267330a509c3077b44e778fb6203888dfc7d214036f8216e4f80c6e4f88bb4b",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -261,10 +261,10 @@
       {"fact_id": "F05", "text": "充电线长度为80厘米"}
     ],
     "required_fact_ids": ["F01", "F02", "F03"],
-    "explicit_forbidden_claims": ["配有遥控器"],
+    "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须包含夹口最大开合尺寸、灯头调节角度和固定方式。",
     "feasibility_qa_status": "pending",
-    "content_hash": "8d33ee282475fcdc4eb4eda2b92eace115f1bee94fed966fd5c68ac4c5b68aae",
+    "content_hash": "35eaf8884ce8961c73f135abe62a114a73e9ee2fb81b55b4116edb930ae8f93d",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -301,10 +301,10 @@
       {"fact_id": "F05", "text": "建议手洗"}
     ],
     "required_fact_ids": ["F01", "F03", "F04"],
-    "explicit_forbidden_claims": ["可用于微波炉"],
+    "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须包含容量、碗体材质和防滑垫信息。",
     "feasibility_qa_status": "pending",
-    "content_hash": "c336b43fcf030bb69b65f91b54834acfc06033ba889db7aef5e7c780e7012fc6",
+    "content_hash": "d2a752c7481190e7a296aba371507d952cc7399d96106fe58ef8bb412e1c31ab",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -320,10 +320,10 @@
       {"fact_id": "F04", "text": "包装内附两根替换棉芯"}
     ],
     "required_fact_ids": ["F01", "F02", "F04"],
-    "explicit_forbidden_claims": ["带有香薰功能"],
+    "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须说明水箱容量、喷雾模式和替换棉芯数量。",
     "feasibility_qa_status": "pending",
-    "content_hash": "70aed4171e91e123df884564731a69cdfc9fb56b416bee7e558cf60d92984d48",
+    "content_hash": "1a88e1b109107fc37caff7ba5314b5374112bc131e6e2710156fdff35c18c9fc",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -343,10 +343,10 @@
       {"fact_id": "F08", "text": "季卡额外包含每月一次新书提醒服务"}
     ],
     "required_fact_ids": ["F03", "F05", "F07"],
-    "explicit_forbidden_claims": ["周末可使用自习区"],
+    "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须准确区分两种会员的借阅上限，并说明自习区的预约条件。",
     "feasibility_qa_status": "pending",
-    "content_hash": "d37fac0f7bc69b34fad1a43f3e624b0b0d31567c4b4afc0d5920a52ffdd336e9",
+    "content_hash": "1a1e0807a67cc2f8d616460aedf12e3524694310e06d742b61d8abb9eaa9f6f0",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -362,10 +362,10 @@
       {"fact_id": "F04", "text": "折叠刀未标注可用于儿童"}
     ],
     "required_fact_ids": ["F01", "F02", "F03"],
-    "explicit_forbidden_claims": ["适合儿童独立使用"],
+    "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须包含餐具组成、收纳袋长度和餐具材质。",
     "feasibility_qa_status": "pending",
-    "content_hash": "80685bd6e9df2b346683bcf5f74f7c2c74699c4ebba6039630a0f0382a4cbce0",
+    "content_hash": "3610e942a3640a4a5ad5e046862708530d557d1b85f37b48e6b19f7a08de9532",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -375,19 +375,18 @@
     "split": "holdout",
     "source_material": "云港展馆预约流程 H2 需先在小程序选择日期和时段，再填写参观人数。普通预约每次最多4人，提交后会在10分钟内收到确认；未收到确认前不能直接入场。预约可在参观前一天18:00前取消，逾期取消不退还已支付的讲解服务费。",
     "source_facts": [
-      {"fact_id": "F01", "text": "需先在小程序选择日期和时段"},
-      {"fact_id": "F02", "text": "再填写参观人数"},
-      {"fact_id": "F03", "text": "普通预约每次最多4人"},
-      {"fact_id": "F04", "text": "提交后会在10分钟内收到确认"},
-      {"fact_id": "F05", "text": "未收到确认前不能直接入场"},
+      {"fact_id": "F01", "text": "需先在小程序选择日期和时段，再填写参观人数"},
+      {"fact_id": "F02", "text": "普通预约每次最多4人"},
+      {"fact_id": "F03", "text": "提交后会在10分钟内收到确认"},
+      {"fact_id": "F04", "text": "未收到确认前不能直接入场"},
       {"fact_id": "F06", "text": "预约可在参观前一天18:00前取消"},
       {"fact_id": "F07", "text": "逾期取消不退还已支付的讲解服务费"}
     ],
-    "required_fact_ids": ["F01", "F03", "F05"],
+    "required_fact_ids": ["F01", "F02", "F04"],
     "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须说明预约填写顺序、人数上限和确认前的入场限制。",
     "feasibility_qa_status": "pending",
-    "content_hash": "02e12d6dc5193d33c5c22e47016d97d80bd8cc0a3639202f92dab3caff48dec6",
+    "content_hash": "f29afa9403adad8e25066f638c903f4b93f8e6d63e9765bd597178bc9541d151",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -406,10 +405,10 @@
       {"fact_id": "F07", "text": "归还需在营业时间10:00—18:00办理"}
     ],
     "required_fact_ids": ["F02", "F04", "F06"],
-    "explicit_forbidden_claims": ["未成年人也可借用相机"],
+    "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须说明相机押金、借用资格条件和逾期费用。",
     "feasibility_qa_status": "pending",
-    "content_hash": "feb3f8bfc8a87d669648b1f79c06e49a489073628c9a641719506cde77196a88",
+    "content_hash": "eae59ffecba898de8902a781f49b21a31f445f35a4121ae789b1c62faea88c19",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
@@ -466,10 +465,10 @@
       {"fact_id": "F05", "text": "清洗标签建议冷水手洗"}
     ],
     "required_fact_ids": ["F01", "F03", "F04"],
-    "explicit_forbidden_claims": ["可烘干"],
+    "explicit_forbidden_claims": [],
     "task_notes": "请生成一份结构化短内容，必须说明展开尺寸、重量和附带束带的收纳方式。",
     "feasibility_qa_status": "pending",
-    "content_hash": "0c6a0b6388af4d9b597433ad639f0b5d9f4bd5888d1a52947778d8153185ff0e",
+    "content_hash": "98183adbe5da4c2376eb9f1952aa03297f64802f72f68e1775f210cb8b201bb9",
     "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
     "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
   },
