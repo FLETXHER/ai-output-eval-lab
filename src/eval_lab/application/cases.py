@@ -6,7 +6,8 @@ from collections.abc import Mapping, Sequence
 
 from eval_lab.application.prompts import WorkflowError
 from eval_lab.domain.task_pack import TASK_PACK_CONTRACT, canonical_json_hash
-from eval_lab.imports.test_cases import parse_test_case_payload
+from eval_lab.imports.test_cases import parse_test_case_payload, validate_experiment_assets
+from eval_lab.repositories.sqlite import insert_grader_condition, transaction
 
 
 def load_case(conn: sqlite3.Connection, case_id: int) -> dict[str, object]:
@@ -156,5 +157,102 @@ def qa_case_set(
     }
 
 
+def register_approved_experiment_assets(
+    conn: sqlite3.Connection, payload: Mapping[str, object]
+) -> dict[str, int]:
+    """Persist the owner-approved v1 asset snapshots as formal provenance.
+
+    A checked-in draft manifest is deliberately rejected. This operation is
+    the only bridge from file-based assets into ``prompt_versions`` and
+    ``grader_conditions``; it adds no new storage shape.
+    """
+    errors = validate_experiment_assets(payload)
+    if errors:
+        raise WorkflowError("experiment assets must be owner-approved: " + "; ".join(errors))
+    assets = payload.get("assets")
+    if not isinstance(assets, list):
+        raise WorkflowError("experiment assets must include an assets list")
+    by_type = {
+        asset["asset_type"]: asset
+        for asset in assets
+        if isinstance(asset, Mapping) and isinstance(asset.get("asset_type"), str)
+    }
+    required_types = ("prompt_v1", "grader_prompt_v1", "rubric_v1", "error_taxonomy_v1")
+    if any(asset_type not in by_type for asset_type in required_types):
+        raise WorkflowError("experiment assets are missing required v1 snapshots")
+
+    prompt_asset = by_type["prompt_v1"]
+    grader_prompt = by_type["grader_prompt_v1"]
+    rubric = by_type["rubric_v1"]
+    taxonomy = by_type["error_taxonomy_v1"]
+    approved_at = _approved_at(prompt_asset)
+    try:
+        grader_product = _required_text(payload, "grader_product")
+        grader_visible_model = _required_text(payload, "grader_visible_model")
+        prompt_text = _required_text(prompt_asset, "content")
+        prompt_hash = _required_text(prompt_asset, "content_hash")
+    except WorkflowError:
+        raise
+
+    # Imports are validated before the transaction so rejected drafts leave no
+    # partial Prompt/Grader provenance rows.
+    from eval_lab.application.prompts import (
+        approve_prompt_version,
+        create_prompt_version,
+        freeze_prompt_version,
+    )
+
+    with transaction(conn):
+        prompt_version_id = create_prompt_version(
+            conn,
+            prompt_text,
+            "v1",
+            "Owner-approved formal baseline experiment asset",
+        )
+        stored_hash = conn.execute(
+            "SELECT content_hash FROM prompt_versions WHERE id = ?", (prompt_version_id,)
+        ).fetchone()[0]
+        if stored_hash != prompt_hash:
+            raise WorkflowError("stored Prompt v1 hash does not match approved asset snapshot")
+        approve_prompt_version(conn, prompt_version_id, approved_at)
+        freeze_prompt_version(conn, prompt_version_id, approved_at)
+        grader_condition_id = insert_grader_condition(
+            conn,
+            {
+                "grader_product": grader_product,
+                "grader_visible_model": grader_visible_model,
+                "grader_prompt": _required_text(grader_prompt, "content"),
+                "grader_prompt_hash": _required_text(grader_prompt, "content_hash"),
+                "grader_prompt_version_label": "v1",
+                "rubric": _required_text(rubric, "content"),
+                "rubric_hash": _required_text(rubric, "content_hash"),
+                "rubric_version_label": "v1",
+                "error_taxonomy": _required_text(taxonomy, "content"),
+                "error_taxonomy_hash": _required_text(taxonomy, "content_hash"),
+                "error_taxonomy_version_label": "v1",
+                "owner_approved_at": _approved_at(grader_prompt),
+                "created_at": _approved_at(grader_prompt),
+            },
+        )
+    return {
+        "prompt_version_id": prompt_version_id,
+        "grader_condition_id": grader_condition_id,
+    }
+
+
 def _case_content_hash(case: Mapping[str, object]) -> str:
     return canonical_json_hash({key: value for key, value in case.items() if key != "content_hash"})
+
+
+def _required_text(payload: Mapping[str, object], key: str) -> str:
+    value = payload.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise WorkflowError(f"experiment asset {key} must be a non-empty string")
+    return value
+
+
+def _approved_at(asset: Mapping[str, object]) -> str:
+    value = asset.get("owner_approved_at")
+    if not isinstance(value, str) or not value.strip():
+        raise WorkflowError("experiment asset must have owner_approved_at")
+    return value

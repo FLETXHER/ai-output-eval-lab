@@ -15,6 +15,7 @@ from eval_lab.repositories.sqlite import (
     insert_evaluation_result,
     insert_grader_fact_results,
     insert_grader_result,
+    transaction,
 )
 
 
@@ -22,7 +23,27 @@ def build_blind_grader_packet_for_output(
     conn: sqlite3.Connection, model_output_id: int, grader_condition_id: int
 ) -> dict[str, object]:
     """Build exactly one pointwise, version-blind Grader packet."""
+    _stored_condition(
+        conn,
+        grader_condition_id,
+        require_owner_approval=_output_uses_frozen_prompt(conn, model_output_id),
+    )
     return build_blind_grader_packet(conn, model_output_id, grader_condition_id)
+
+
+def approve_grader_condition(
+    conn: sqlite3.Connection, grader_condition_id: int, approved_at: str
+) -> None:
+    """Record owner approval before a Grader condition is used formally."""
+    _require_non_empty(approved_at, "approved_at")
+    row = _stored_condition(conn, grader_condition_id)
+    if row["owner_approved_at"] is not None:
+        raise WorkflowError("grader condition is already owner-approved")
+    with transaction(conn):
+        conn.execute(
+            "UPDATE grader_conditions SET owner_approved_at = ? WHERE id = ?",
+            (approved_at, grader_condition_id),
+        )
 
 
 def import_grader_result(
@@ -127,7 +148,11 @@ def calculate_output_status(
     case_id = _case_id_for_output(conn, model_output_id)
     case = load_case(conn, case_id)
     required_fact_ids = _required_fact_ids(case)
-    _stored_condition(conn, grader_condition_id)
+    _stored_condition(
+        conn,
+        grader_condition_id,
+        require_owner_approval=_output_uses_frozen_prompt(conn, model_output_id),
+    )
     if conn.execute(
         "SELECT 1 FROM evaluation_results WHERE model_output_id = ? AND grader_condition_id = ?",
         (model_output_id, grader_condition_id),
@@ -170,10 +195,15 @@ def _stored_condition(
     conn: sqlite3.Connection,
     condition_id: int,
     supplied: Mapping[str, object] | None = None,
+    require_owner_approval: bool = False,
 ) -> sqlite3.Row:
     row = conn.execute("SELECT * FROM grader_conditions WHERE id = ?", (condition_id,)).fetchone()
     if row is None:
         raise WorkflowError(f"grader condition {condition_id} was not found")
+    if require_owner_approval and (
+        not isinstance(row["owner_approved_at"], str) or not row["owner_approved_at"].strip()
+    ):
+        raise WorkflowError("formal Grader use requires an owner-approved grader condition")
     if supplied is not None:
         for key in (
             "grader_prompt", "grader_prompt_hash", "rubric", "rubric_hash",
@@ -182,6 +212,22 @@ def _stored_condition(
             if key in supplied and supplied[key] != row[key]:
                 raise WorkflowError("grader condition snapshots must match stored provenance")
     return row
+
+
+def _output_uses_frozen_prompt(conn: sqlite3.Connection, model_output_id: int) -> bool:
+    row = conn.execute(
+        """
+        SELECT pv.status
+        FROM model_outputs AS mo
+        JOIN evaluation_runs AS er ON er.id = mo.evaluation_run_id
+        JOIN prompt_versions AS pv ON pv.id = er.prompt_version_id
+        WHERE mo.id = ?
+        """,
+        (model_output_id,),
+    ).fetchone()
+    if row is None:
+        raise WorkflowError(f"model output {model_output_id} was not found")
+    return row["status"] == "frozen"
 
 
 def _case_id_for_output(conn: sqlite3.Connection, model_output_id: int) -> int:

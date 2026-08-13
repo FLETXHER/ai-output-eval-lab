@@ -5,7 +5,11 @@ import sqlite3
 from datetime import datetime, timezone
 
 from eval_lab.repositories.sqlite import freeze_prompt_version as persist_frozen_prompt
-from eval_lab.repositories.sqlite import insert_prompt_version
+from eval_lab.repositories.sqlite import (
+    get_evaluation_run,
+    insert_prompt_version,
+    transaction,
+)
 
 
 class WorkflowError(ValueError):
@@ -45,13 +49,72 @@ def freeze_prompt_version(
     """Freeze an existing draft prompt without changing its recorded text/hash."""
     _require_non_empty(frozen_at, "frozen_at")
     row = conn.execute(
-        "SELECT status FROM prompt_versions WHERE id = ?", (prompt_version_id,)
+        "SELECT status, owner_approved_at FROM prompt_versions WHERE id = ?", (prompt_version_id,)
     ).fetchone()
     if row is None:
         raise WorkflowError(f"prompt version {prompt_version_id} was not found")
     if row["status"] != "draft":
         raise WorkflowError("only a draft prompt version can be frozen")
+    if not isinstance(row["owner_approved_at"], str) or not row["owner_approved_at"].strip():
+        raise WorkflowError("only an owner-approved prompt version can be frozen")
     persist_frozen_prompt(conn, prompt_version_id, frozen_at)
+
+
+def approve_prompt_version(
+    conn: sqlite3.Connection, prompt_version_id: int, approved_at: str
+) -> None:
+    """Record owner approval for a draft prompt without freezing it."""
+    _require_non_empty(approved_at, "approved_at")
+    row = conn.execute(
+        "SELECT status, owner_approved_at FROM prompt_versions WHERE id = ?", (prompt_version_id,)
+    ).fetchone()
+    if row is None:
+        raise WorkflowError(f"prompt version {prompt_version_id} was not found")
+    if row["status"] != "draft":
+        raise WorkflowError("only a draft prompt version can be owner-approved")
+    if row["owner_approved_at"] is not None:
+        raise WorkflowError("prompt version is already owner-approved")
+    with transaction(conn):
+        conn.execute(
+            "UPDATE prompt_versions SET owner_approved_at = ?, updated_at = ? WHERE id = ?",
+            (approved_at, _utc_now(), prompt_version_id),
+        )
+
+
+def create_prompt_v2_after_dev(
+    conn: sqlite3.Connection,
+    dev_run_id: int,
+    prompt_text: str,
+    change_reason: str,
+) -> int:
+    """Create a v2 draft only after a closed Dev v1 run has stored results."""
+    _require_non_empty(prompt_text, "prompt_text")
+    _require_non_empty(change_reason, "change_reason")
+    try:
+        run = get_evaluation_run(conn, dev_run_id)
+    except LookupError as exc:
+        raise WorkflowError(f"evaluation run {dev_run_id} was not found") from exc
+    if run["split"] != "dev":
+        raise WorkflowError("Prompt v2 can only be created after a Dev run")
+    if run["status"] != "closed":
+        raise WorkflowError("Dev run must be closed before creating Prompt v2")
+    prompt = conn.execute(
+        "SELECT version_label FROM prompt_versions WHERE id = ?", (run["prompt_version_id"],)
+    ).fetchone()
+    if prompt is None or prompt["version_label"] != "v1":
+        raise WorkflowError("Prompt v2 requires a completed Dev Prompt v1 run")
+    result_count = conn.execute(
+        """
+        SELECT COUNT(*)
+        FROM evaluation_results AS er
+        JOIN model_outputs AS mo ON mo.id = er.model_output_id
+        WHERE mo.evaluation_run_id = ?
+        """,
+        (dev_run_id,),
+    ).fetchone()[0]
+    if int(result_count) == 0:
+        raise WorkflowError("Dev run must have evaluation_results before creating Prompt v2")
+    return create_prompt_version(conn, prompt_text, "v2", change_reason)
 
 
 def _require_non_empty(value: object, name: str) -> str:

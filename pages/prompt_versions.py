@@ -6,7 +6,12 @@ from datetime import datetime, timezone
 import pandas as pd
 import streamlit as st
 
-from eval_lab.application.prompts import WorkflowError, create_prompt_version, freeze_prompt_version
+from eval_lab.application.prompts import (
+    WorkflowError,
+    approve_prompt_version,
+    create_prompt_version,
+    freeze_prompt_version,
+)
 from eval_lab.repositories.sqlite import list_prompt_versions
 from eval_lab.ui.components import show_validation_errors, status_badge
 
@@ -49,6 +54,7 @@ def _render_existing_versions(conn: sqlite3.Connection) -> None:
                 "status": prompt["status"],
                 "change_reason": prompt["change_reason"],
                 "content_hash": prompt["content_hash"],
+                "owner_approved_at": prompt["owner_approved_at"],
                 "frozen_at": prompt["frozen_at"],
             }
             for prompt in prompts
@@ -61,6 +67,16 @@ def _render_existing_versions(conn: sqlite3.Connection) -> None:
     st.code(str(selected["prompt_text"]), language=None)
     status_badge(str(selected["status"]))
     if selected["status"] == "draft":
+        if selected["owner_approved_at"] is None:
+            if st.button("Record owner approval"):
+                try:
+                    approve_prompt_version(conn, int(selected["id"]), _utc_now())
+                except WorkflowError as error:
+                    show_validation_errors([str(error)])
+                else:
+                    st.success(f"Recorded owner approval for Prompt {selected['version_label']}.")
+            st.info("Owner approval must be recorded before this Prompt can be frozen.")
+            return
         if st.button("Freeze selected Prompt"):
             try:
                 freeze_prompt_version(conn, int(selected["id"]), _utc_now())

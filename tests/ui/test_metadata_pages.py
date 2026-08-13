@@ -139,6 +139,11 @@ def test_test_case_split_filter_and_prompt_lifecycle_in_ui(temporary_db_path, re
     prompts = _page_test("pages.prompt_versions", str(temporary_db_path), str(repo_root))
     prompts.selectbox[0].select("v1")
     prompts.button[1].click().run()
+    assert prompts.success[0].value == "Recorded owner approval for Prompt v1."
+
+    prompts = _page_test("pages.prompt_versions", str(temporary_db_path), str(repo_root))
+    prompts.selectbox[0].select("v1")
+    prompts.button[1].click().run()
     conn = connect(temporary_db_path)
     frozen = conn.execute("SELECT prompt_text, status, frozen_at FROM prompt_versions WHERE id = 1").fetchone()
     assert frozen[0] == "根据材料生成 JSON"

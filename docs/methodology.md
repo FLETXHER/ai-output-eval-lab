@@ -54,6 +54,25 @@ every Case. The formal experiment must therefore not claim to have tested
 literal forbidden-claim detection; unsupported factual claims are primarily
 assessed by the closed-world AI Grader.
 
+## Experiment asset approval gate
+
+`db/seed_data/experiment_assets_v1.json` contains four reproducible snapshots:
+Prompt v1, Grader Prompt v1, Rubric v1, and Error Taxonomy v1. Each snapshot
+has its exact content, SHA-256 content hash, version label, status, and owner
+approval timestamp. The checked-in file is intentionally a Codex-assisted
+**draft**: every asset remains `status: "draft"` with
+`owner_approved_at: null`. It is not a formal experiment asset and cannot be
+registered, frozen, or used for a formal run.
+
+Only an owner-reviewed manifest whose four v1 assets have matching hashes and
+explicit approval timestamps can register one frozen Prompt v1 and one Grader
+Condition in SQLite. Prompt v1 or v2 cannot freeze without owner approval. A
+Grader Condition without owner approval may support a non-formal demo workflow,
+but cannot render a blind grading packet for an output from a frozen formal
+Prompt. Prompt v2 may be drafted only after a closed Dev Prompt v1 run has
+stored evaluation results and a non-empty evidence-based change reason; it is
+still a draft until separately owner-approved and frozen.
+
 ## Split discipline and interpretation
 
 The formal collection, after owner approval only, must contain exactly 18 Dev

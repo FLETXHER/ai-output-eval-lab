@@ -9,6 +9,7 @@ import pytest
 
 from eval_lab.application.grading import (
     WorkflowError,
+    approve_grader_condition,
     build_blind_grader_packet_for_output,
     calculate_output_status,
     import_grader_result,
@@ -16,7 +17,11 @@ from eval_lab.application.grading import (
 )
 from eval_lab.application.cases import load_case
 from eval_lab.application.outputs import evaluate_output_rules, record_model_output
-from eval_lab.application.prompts import create_prompt_version
+from eval_lab.application.prompts import (
+    approve_prompt_version,
+    create_prompt_version,
+    freeze_prompt_version,
+)
 from eval_lab.application.runs import create_evaluation_run
 from eval_lab.domain.task_pack import TASK_PACK_CONTRACT, canonical_json_hash
 from eval_lab.repositories.sqlite import (
@@ -232,3 +237,22 @@ def test_load_case_returns_annotations_and_fixed_contract(conn) -> None:
     case = load_case(conn, case_id)
     assert case["required_fact_ids"] == ["F01"]
     assert case["task_pack_contract"]["root_keys"] == ["title", "summary", "key_points"]
+
+
+def test_formal_grader_use_requires_owner_approved_condition(conn) -> None:
+    output_id, run_id = _setup_output(conn)
+    prompt_id = conn.execute(
+        "SELECT prompt_version_id FROM evaluation_runs WHERE id = ?", (run_id,)
+    ).fetchone()[0]
+    approve_prompt_version(conn, prompt_id, NOW)
+    freeze_prompt_version(conn, prompt_id, NOW)
+    condition_id = insert_grader_condition(conn, _condition_data())
+
+    with pytest.raises(WorkflowError, match="owner-approved grader condition"):
+        build_blind_grader_packet_for_output(conn, output_id, condition_id)
+
+    approve_grader_condition(conn, condition_id, NOW)
+    assert (
+        build_blind_grader_packet_for_output(conn, output_id, condition_id)["packet_version"]
+        == "blind-grader-1.0"
+    )

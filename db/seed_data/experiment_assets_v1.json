@@ -1,0 +1,39 @@
+{
+  "manifest_version": "1.0",
+  "grader_product": "manual_external_product",
+  "grader_visible_model": "not_visible",
+  "assets": [
+    {
+      "asset_type": "prompt_v1",
+      "version_label": "v1",
+      "content": "你将基于用户可见任务说明和 source_material 生成简体中文结构化短内容。仅使用 source_material 直接支持的事实；不要补充外部知识、推断或未支持的评价。严格只输出一个 JSON object，且只能包含 title、summary、key_points 三个字段；不要使用 Markdown、代码围栏或额外说明。title、summary 和每条 key_points 均需满足任务包给出的字符限制，key_points 必须恰好三条。",
+      "content_hash": "07aa48853dbe0ed54ff88a2476ce6ec9be2cac4d2680dc2b41d0fc36c392ae4f",
+      "status": "draft",
+      "owner_approved_at": null
+    },
+    {
+      "asset_type": "grader_prompt_v1",
+      "version_label": "v1",
+      "content": "你是独立、盲化的 pointwise AI Grader。只依据当前 candidate、source_material、source_facts、required_fact_ids、固定 contract、rubric 与 error taxonomy 评分；不得推断 prompt 版本、数据 split、生成产品或任何实验结论。对 required facts 返回 fact_id、met/not_met/indeterminate、输出证据和简短理由；对 unsupported claims 返回具体 output evidence、supporting_fact_ids 与理由。证据不足时返回 indeterminate，不猜测。",
+      "content_hash": "ddb1668f15aed2d1f4e2924ac4d57f0259a95970fac5394ed8ed932c731c81c9",
+      "status": "draft",
+      "owner_approved_at": null
+    },
+    {
+      "asset_type": "rubric_v1",
+      "version_label": "v1",
+      "content": "Required facts：每个 required_fact_id 只要在输出中被准确语义表达即可判 met；同义改写允许。Closed-world groundedness：任何可判断真假的事实性命题均须获得 source_material 的直接支持；外部知识、未支持的因果、比较、程度与评价性事实判断均为 unsupported。Language compliance：字段值主体自然语言须为简体中文，必要品牌、型号、缩写、数字或单位可保留。Readability 与 primary_error_type 仅用于诊断，不直接决定 pass/fail。",
+      "content_hash": "2fc85d6dbd51d146af1f9ad5e23b023de7db52249826ca802be7f8083724fa10",
+      "status": "draft",
+      "owner_approved_at": null
+    },
+    {
+      "asset_type": "error_taxonomy_v1",
+      "version_label": "v1",
+      "content": "required_fact_missing：必需事实未被准确语义表达。unsupported_claim：输出包含 source_material 无直接支持的可判断真假的事实性命题。language_noncompliance：字段值主体并非简体中文。readability_issue：表达明显影响可读性。ambiguous_evidence：source、输出或 annotation 的语义不足以可靠判定。other：其余需要说明的诊断问题。",
+      "content_hash": "c7064049a6b9f87df3e26d6fd018549ccedfe9ea3c4f86795133d8fe4bc33670",
+      "status": "draft",
+      "owner_approved_at": null
+    }
+  ]
+}
