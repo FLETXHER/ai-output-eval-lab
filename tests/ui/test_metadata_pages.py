@@ -100,6 +100,19 @@ def test_overview_and_task_pack_show_counts_and_fixed_contract(temporary_db_path
     assert any("feasibility QA" in item.value for item in packs.markdown)
 
 
+def test_task_pack_empty_state_still_shows_fixed_contract_and_qa(temporary_db_path, repo_root) -> None:
+    conn = connect(temporary_db_path)
+    initialize_database(conn, repo_root / "db" / "schema.sql")
+    conn.close()
+
+    packs = _page_test("pages.task_pack", str(temporary_db_path), str(repo_root))
+
+    assert not packs.exception
+    assert packs.info[0].value == "No Task Pack has been initialized yet."
+    assert any("4–20" in item.value for item in packs.markdown)
+    assert any("feasibility QA" in item.value for item in packs.markdown)
+
+
 def test_test_case_split_filter_and_prompt_lifecycle_in_ui(temporary_db_path, repo_root) -> None:
     _seed_metadata(temporary_db_path, repo_root)
 
