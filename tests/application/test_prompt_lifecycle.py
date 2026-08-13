@@ -88,7 +88,25 @@ def test_create_prompt_v2_requires_closed_dev_run_results_and_change_reason(
     assert v2["owner_approved_at"] is None
 
 
+def test_create_prompt_v2_rejects_partial_dev_case_coverage(
+    conn: sqlite3.Connection,
+) -> None:
+    v1_id = create_prompt_version(conn, "baseline", "v1", "baseline")
+    dev_run_id = create_evaluation_run(conn, v1_id, "DEV-COMP-PARTIAL", "dev", METADATA)
+    _record_dev_evaluation_results(conn, dev_run_id, evaluated_case_count=1)
+    close_run(conn, dev_run_id)
+
+    with pytest.raises(WorkflowError, match="complete Dev case coverage"):
+        create_prompt_v2_after_dev(conn, dev_run_id, "revised", "dev failures")
+
+
 def _record_completed_evaluation_result(conn: sqlite3.Connection, run_id: int) -> None:
+    _record_dev_evaluation_results(conn, run_id, evaluated_case_count=2)
+
+
+def _record_dev_evaluation_results(
+    conn: sqlite3.Connection, run_id: int, *, evaluated_case_count: int
+) -> None:
     pack_id = insert_task_pack(
         conn,
         {
@@ -107,37 +125,50 @@ def _record_completed_evaluation_result(conn: sqlite3.Connection, run_id: int) -
             "updated_at": NOW,
         },
     )
-    case_data = {
-        "case_key": "dev-v1-case",
-        "revision": 1,
-        "split": "dev",
-        "source_material": "来源事实。",
-        "source_facts": [{"fact_id": "F01", "text": "来源事实。"}],
-        "required_fact_ids": ["F01"],
-        "explicit_forbidden_claims": [],
-        "task_notes": "包含来源事实。",
-        "feasibility_qa_status": "pass",
-    }
-    case_id = insert_test_case(
-        conn,
-        {
-            **case_data,
-            "task_pack_id": pack_id,
-            "content_hash": canonical_json_hash(case_data),
-            "created_at": NOW,
-            "updated_at": NOW,
-        },
-    )
-    output_id = conn.execute(
-        """
-        INSERT INTO model_outputs (
-            evaluation_run_id, test_case_id, candidate_id, generation_packet_version,
-            generation_packet_hash, raw_response, output_hash, generated_at,
-            technical_retry_count, technical_retry_reasons_json, created_at, updated_at
-        ) VALUES (?, ?, 'candidate-1', '1.0', ?, '{}', ?, ?, 0, '[]', ?, ?)
-        """,
-        (run_id, case_id, "a" * 64, "b" * 64, NOW, NOW, NOW),
-    ).lastrowid
+    output_ids: list[int] = []
+    for index in range(2):
+        case_data = {
+            "case_key": f"dev-v1-case-{index + 1}",
+            "revision": 1,
+            "split": "dev",
+            "source_material": "来源事实。",
+            "source_facts": [{"fact_id": "F01", "text": "来源事实。"}],
+            "required_fact_ids": ["F01"],
+            "explicit_forbidden_claims": [],
+            "task_notes": "包含来源事实。",
+            "feasibility_qa_status": "pass",
+        }
+        case_id = insert_test_case(
+            conn,
+            {
+                **case_data,
+                "task_pack_id": pack_id,
+                "content_hash": canonical_json_hash(case_data),
+                "created_at": NOW,
+                "updated_at": NOW,
+            },
+        )
+        output_ids.append(
+            conn.execute(
+                """
+                INSERT INTO model_outputs (
+                    evaluation_run_id, test_case_id, candidate_id, generation_packet_version,
+                    generation_packet_hash, raw_response, output_hash, generated_at,
+                    technical_retry_count, technical_retry_reasons_json, created_at, updated_at
+                ) VALUES (?, ?, ?, '1.0', ?, '{}', ?, ?, 0, '[]', ?, ?)
+                """,
+                (
+                    run_id,
+                    case_id,
+                    f"candidate-{index + 1}",
+                    f"{index + 1:064d}",
+                    f"{index + 2:064d}",
+                    NOW,
+                    NOW,
+                    NOW,
+                ),
+            ).lastrowid
+        )
     condition_id = insert_grader_condition(
         conn,
         {
@@ -156,18 +187,19 @@ def _record_completed_evaluation_result(conn: sqlite3.Connection, run_id: int) -
             "created_at": NOW,
         },
     )
-    insert_evaluation_result(
-        conn,
-        {
-            "model_output_id": output_id,
-            "grader_result_id": None,
-            "grader_condition_id": condition_id,
-            "aggregation_rule_version": "1.0",
-            "calculated_status": "indeterminate",
-            "blocking_reasons": ["grader missing"],
-            "calculated_at": NOW,
-        },
-    )
+    for output_id in output_ids[:evaluated_case_count]:
+        insert_evaluation_result(
+            conn,
+            {
+                "model_output_id": output_id,
+                "grader_result_id": None,
+                "grader_condition_id": condition_id,
+                "aggregation_rule_version": "1.0",
+                "calculated_status": "indeterminate",
+                "blocking_reasons": ["grader missing"],
+                "calculated_at": NOW,
+            },
+        )
 
 
 def test_runs_require_metadata_are_comparable_and_can_close(conn: sqlite3.Connection) -> None:

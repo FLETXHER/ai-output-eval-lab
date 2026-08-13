@@ -114,7 +114,69 @@ def create_prompt_v2_after_dev(
     ).fetchone()[0]
     if int(result_count) == 0:
         raise WorkflowError("Dev run must have evaluation_results before creating Prompt v2")
+    _require_complete_dev_case_coverage(conn, dev_run_id)
     return create_prompt_version(conn, prompt_text, "v2", change_reason)
+
+
+def _require_complete_dev_case_coverage(
+    conn: sqlite3.Connection, dev_run_id: int
+) -> None:
+    """Require output and evaluation coverage for every Dev Case in the run's Task Pack."""
+    task_pack_rows = conn.execute(
+        """
+        SELECT DISTINCT tc.task_pack_id
+        FROM model_outputs AS mo
+        JOIN test_cases AS tc ON tc.id = mo.test_case_id
+        WHERE mo.evaluation_run_id = ?
+        """,
+        (dev_run_id,),
+    ).fetchall()
+    if len(task_pack_rows) != 1:
+        raise WorkflowError(
+            "Dev run must have complete Dev case coverage for exactly one Task Pack"
+        )
+    task_pack_id = task_pack_rows[0]["task_pack_id"]
+    expected_cases = conn.execute(
+        """
+        SELECT id, case_key
+        FROM test_cases
+        WHERE task_pack_id = ? AND split = 'dev'
+        ORDER BY case_key, revision, id
+        """,
+        (task_pack_id,),
+    ).fetchall()
+    if not expected_cases:
+        raise WorkflowError("Dev run must have complete Dev case coverage; no Dev Cases found")
+
+    missing_outputs: list[str] = []
+    missing_results: list[str] = []
+    for case in expected_cases:
+        output = conn.execute(
+            """
+            SELECT mo.id
+            FROM model_outputs AS mo
+            WHERE mo.evaluation_run_id = ? AND mo.test_case_id = ?
+            """,
+            (dev_run_id, case["id"]),
+        ).fetchone()
+        case_key = str(case["case_key"])
+        if output is None:
+            missing_outputs.append(case_key)
+            continue
+        result_count = conn.execute(
+            "SELECT COUNT(*) FROM evaluation_results WHERE model_output_id = ?",
+            (output["id"],),
+        ).fetchone()[0]
+        if int(result_count) == 0:
+            missing_results.append(case_key)
+
+    if missing_outputs or missing_results:
+        details: list[str] = []
+        if missing_outputs:
+            details.append("missing model outputs: " + ", ".join(missing_outputs))
+        if missing_results:
+            details.append("missing evaluation_results: " + ", ".join(missing_results))
+        raise WorkflowError("Dev run must have complete Dev case coverage (" + "; ".join(details) + ")")
 
 
 def _require_non_empty(value: object, name: str) -> str:
