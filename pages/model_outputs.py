@@ -9,6 +9,11 @@ from eval_lab.application.cases import load_case
 from eval_lab.application.outputs import evaluate_output_rules, record_model_output
 from eval_lab.application.packets import build_generation_packet
 from eval_lab.application.prompts import WorkflowError
+from eval_lab.application.ui_queries import (
+    get_model_output_slot,
+    list_open_evaluation_runs,
+    list_test_cases_for_split,
+)
 from eval_lab.ui.components import show_validation_errors
 
 
@@ -18,12 +23,7 @@ def render(conn: sqlite3.Connection) -> None:
     if context is None:
         return
     run_id, case_id = context
-    output = conn.execute(
-        """SELECT id, raw_response, generation_packet_version, generation_packet_hash,
-                  technical_retry_count, technical_retry_reasons_json
-        FROM model_outputs WHERE evaluation_run_id = ? AND test_case_id = ?""",
-        (run_id, case_id),
-    ).fetchone()
+    output = get_model_output_slot(conn, run_id, case_id)
     if output is not None and output["raw_response"] is not None:
         st.info("The first actual response is saved as immutable evidence.")
         st.caption(f"Generation packet version: {output['generation_packet_version']}")
@@ -46,18 +46,13 @@ def render(conn: sqlite3.Connection) -> None:
 
 
 def _select_open_run_and_case(conn: sqlite3.Connection) -> tuple[int, int] | None:
-    runs = list(conn.execute(
-        "SELECT id, split FROM evaluation_runs WHERE status = 'open' ORDER BY id"
-    ))
+    runs = list_open_evaluation_runs(conn)
     if not runs:
         st.info("No open Evaluation Run is available for model-output capture.")
         return None
     run_by_id = {int(run["id"]): run for run in runs}
     run_id = st.selectbox("Evaluation Run", list(run_by_id), format_func=lambda value: f"Run {value}")
-    cases = list(conn.execute(
-        "SELECT id, case_key, revision FROM test_cases WHERE split = ? ORDER BY case_key, revision",
-        (run_by_id[run_id]["split"],),
-    ))
+    cases = list_test_cases_for_split(conn, str(run_by_id[run_id]["split"]))
     if not cases:
         st.info("The selected run has no Cases in its split.")
         return None
@@ -74,6 +69,7 @@ def _render_actual_response_form(
     conn: sqlite3.Connection, run_id: int, case_id: int, packet: dict[str, object]
 ) -> None:
     st.subheader("Record first actual response")
+    st.caption("If no actual response was generated, leave this form and record a technical retry below.")
     with st.form("record_actual_model_response"):
         raw_response = st.text_area("Raw model response", height=180)
         generated_at = st.text_input("Generated at (UTC ISO 8601)", value=_utc_now())

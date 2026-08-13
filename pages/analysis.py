@@ -10,11 +10,12 @@ from eval_lab.analysis.reports import (
     run_summary,
     status_distribution,
 )
+from eval_lab.application.ui_queries import list_analysis_runs
 
 
 def render(conn: sqlite3.Connection) -> None:
     st.title("Analysis")
-    runs = list(conn.execute("SELECT id, comparison_group_id FROM evaluation_runs ORDER BY id"))
+    runs = list_analysis_runs(conn)
     if not runs:
         st.info("No Evaluation Runs are available for descriptive analysis.")
         return

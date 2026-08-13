@@ -175,6 +175,8 @@ def _validate_capture_arguments(
         return
     if technical_retry_reason is not None:
         raise WorkflowError("an actual response cannot include a technical retry reason")
+    if not raw_response.strip():
+        raise WorkflowError("raw_response must contain non-whitespace text; use technical retry if no response was generated")
     _require_non_empty(generated_at, "generated_at")
 
 

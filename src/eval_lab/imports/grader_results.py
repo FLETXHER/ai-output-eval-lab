@@ -3,7 +3,15 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 
 from eval_lab.domain.grader_contract import validate_grader_payload
-from eval_lab.imports import ValidationResult, exact_keys, invalid, non_empty_string, sha256_hash, valid
+from eval_lab.imports import (
+    ValidationResult,
+    exact_keys,
+    invalid,
+    non_empty_string,
+    parse_json_text,
+    sha256_hash,
+    valid,
+)
 
 
 _GRADER_FIELDS = {
@@ -52,3 +60,16 @@ def parse_grader_payload(
     }
     errors.extend(validate_grader_payload(semantic_payload, required_fact_ids))
     return invalid(errors) if errors else valid(payload)
+
+
+def parse_grader_payload_text(
+    raw_text: str, required_fact_ids: Sequence[str]
+) -> ValidationResult:
+    """Strictly parse external Grader text before validating its required schema."""
+    parsed = parse_json_text(raw_text)
+    if isinstance(parsed, Mapping) and parsed.get("ok") is False and "errors" in parsed:
+        errors = parsed.get("errors")
+        return invalid(list(errors) if isinstance(errors, list) else ["invalid JSON"])
+    if not isinstance(parsed, Mapping):
+        return invalid(["grader payload must be an object"])
+    return parse_grader_payload(parsed, required_fact_ids)

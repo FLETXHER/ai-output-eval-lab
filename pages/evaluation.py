@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-import json
 import sqlite3
 
 import streamlit as st
@@ -9,12 +7,19 @@ import streamlit as st
 from eval_lab.application.grading import (
     build_blind_grader_packet_for_output,
     calculate_output_status,
-    import_grader_result,
+    import_grader_result_text,
 )
 from eval_lab.application.prompts import WorkflowError
 from eval_lab.application.reviews import (
     build_blind_human_review_packet_for_result,
     record_human_review,
+)
+from eval_lab.application.ui_queries import (
+    get_decision_layer_comparison,
+    get_grader_condition,
+    list_captured_model_outputs,
+    list_grader_condition_ids,
+    list_unreviewed_evaluation_results,
 )
 from eval_lab.ui.components import show_validation_errors
 
@@ -29,12 +34,9 @@ def render(conn: sqlite3.Connection) -> None:
 
 
 def _render_blind_grader_import(conn: sqlite3.Connection) -> None:
-    outputs = list(conn.execute(
-        """SELECT id, candidate_id FROM model_outputs
-        WHERE raw_response IS NOT NULL ORDER BY id"""
-    ))
-    conditions = list(conn.execute("SELECT id FROM grader_conditions ORDER BY id"))
-    if not outputs or not conditions:
+    outputs = list_captured_model_outputs(conn)
+    condition_ids = list_grader_condition_ids(conn)
+    if not outputs or not condition_ids:
         st.info("A captured response and a Grader Condition are required before import.")
         return
     output_by_id = {int(row["id"]): row for row in outputs}
@@ -42,7 +44,6 @@ def _render_blind_grader_import(conn: sqlite3.Connection) -> None:
         "Anonymous candidate", list(output_by_id),
         format_func=lambda value: str(output_by_id[value]["candidate_id"]),
     )
-    condition_ids = [int(row["id"]) for row in conditions]
     condition_id = st.selectbox("Grader Condition", condition_ids, format_func=lambda value: f"Condition {value}")
     try:
         packet = build_blind_grader_packet_for_output(conn, output_id, condition_id)
@@ -59,27 +60,19 @@ def _render_blind_grader_import(conn: sqlite3.Connection) -> None:
     if not submitted:
         return
     try:
-        parsed = json.loads(raw_json)
-        if not isinstance(parsed, dict):
-            raise WorkflowError("grader JSON must be an object")
-        condition = dict(conn.execute("SELECT * FROM grader_conditions WHERE id = ?", (condition_id,)).fetchone())
-        grader_result_id = import_grader_result(conn, output_id, condition, parsed)
+        condition = get_grader_condition(conn, condition_id)
+        if condition is None:
+            raise WorkflowError("grader condition was not found")
+        grader_result_id = import_grader_result_text(conn, output_id, dict(condition), raw_json)
         calculate_output_status(conn, output_id, grader_result_id, condition_id)
-    except (json.JSONDecodeError, WorkflowError, LookupError, ValueError, TypeError) as error:
+    except (WorkflowError, LookupError, ValueError, TypeError) as error:
         show_validation_errors([str(error)])
     else:
         st.success("Imported the blind Grader result and calculated automatic status.")
 
 
 def _render_blind_human_review(conn: sqlite3.Connection) -> None:
-    rows = list(conn.execute(
-        """SELECT er.id, mo.candidate_id
-        FROM evaluation_results AS er
-        JOIN model_outputs AS mo ON mo.id = er.model_output_id
-        LEFT JOIN human_reviews AS hr ON hr.evaluation_result_id = er.id
-        WHERE hr.id IS NULL
-        ORDER BY er.id"""
-    ))
+    rows = list_unreviewed_evaluation_results(conn)
     if not rows:
         st.info("No unreviewed automatic Evaluation Result is available.")
         return
@@ -123,19 +116,9 @@ def _render_blind_human_review(conn: sqlite3.Connection) -> None:
 
 
 def _render_post_submission_comparison(conn: sqlite3.Connection, evaluation_result_id: int) -> None:
-    row = conn.execute(
-        """SELECT er.calculated_status, hr.final_decision
-        FROM evaluation_results AS er
-        JOIN human_reviews AS hr ON hr.evaluation_result_id = er.id
-        WHERE er.id = ?""",
-        (evaluation_result_id,),
-    ).fetchone()
+    row = get_decision_layer_comparison(conn, evaluation_result_id)
     if row is None:
         return
     st.markdown("### Post-submission decision layers")
     st.caption(f"calculated_status: {row['calculated_status']}")
     st.caption(f"final_decision: {row['final_decision']}")
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")

@@ -202,6 +202,30 @@ def test_evaluation_page_blind_grader_packet_hides_experiment_metadata(temporary
     assert output_id > 0
 
 
+def test_evaluation_ui_passes_raw_grader_text_to_application_without_json_repair_or_write(
+    temporary_db_path, repo_root
+) -> None:
+    ids = _seed(temporary_db_path, repo_root)
+    conn = connect(temporary_db_path)
+    record_model_output(conn, ids["run_id"], ids["case_id"], "generation-1.0", "a" * 64, "raw candidate", NOW)
+    conn.close()
+    page = _page_test("pages.evaluation", str(temporary_db_path), str(repo_root))
+    page.text_area[0].set_value("```json\n{}\n```")
+    page.button[0].click().run()
+    assert not page.exception
+    assert page.error
+    conn = connect(temporary_db_path)
+    assert conn.execute("SELECT COUNT(*) FROM grader_results").fetchone()[0] == 0
+    conn.close()
+
+
+def test_ui_pages_delegate_sql_reads_and_json_parsing_outside_page_modules(repo_root) -> None:
+    for name in ("model_outputs.py", "evaluation.py", "analysis.py"):
+        source = (repo_root / "pages" / name).read_text(encoding="utf-8")
+        assert "conn.execute" not in source
+    assert "json.loads" not in (repo_root / "pages" / "evaluation.py").read_text(encoding="utf-8")
+
+
 def test_blind_human_review_hides_automatic_evidence_until_submission_then_shows_both_layers(
     temporary_db_path, repo_root
 ) -> None:

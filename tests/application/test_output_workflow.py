@@ -78,6 +78,34 @@ def test_technical_retries_are_null_response_only_and_recorded(conn, run_and_cas
         record_model_output(conn, run_id, case_id, "packet-v1", "packet-hash", "response", NOW, "network error")
 
 
+def test_blank_actual_response_is_rejected_without_creating_quality_evidence(conn, run_and_case) -> None:
+    run_id, case_id = run_and_case
+    with pytest.raises(WorkflowError, match="raw_response must contain non-whitespace"):
+        record_model_output(conn, run_id, case_id, "packet-v1", "packet-hash", " \n\t ", NOW)
+    assert conn.execute("SELECT COUNT(*) FROM model_outputs").fetchone()[0] == 0
+    assert conn.execute("SELECT COUNT(*) FROM rule_results").fetchone()[0] == 0
+
+    output_id = record_model_output(
+        conn, run_id, case_id, "packet-v1", "packet-hash", None, None, "network error"
+    )
+    before = tuple(
+        conn.execute(
+            "SELECT raw_response, technical_retry_count, technical_retry_reasons_json FROM model_outputs WHERE id = ?",
+            (output_id,),
+        ).fetchone()
+    )
+    with pytest.raises(WorkflowError, match="raw_response must contain non-whitespace"):
+        record_model_output(conn, run_id, case_id, "packet-v1", "packet-hash", "\n  ", NOW)
+    after = tuple(
+        conn.execute(
+            "SELECT raw_response, technical_retry_count, technical_retry_reasons_json FROM model_outputs WHERE id = ?",
+            (output_id,),
+        ).fetchone()
+    )
+    assert after == before
+    assert conn.execute("SELECT COUNT(*) FROM rule_results").fetchone()[0] == 0
+
+
 def test_packet_provenance_closed_run_and_rules_persistence(conn, run_and_case) -> None:
     run_id, case_id = run_and_case
     with pytest.raises(WorkflowError, match="generation_packet_version"):

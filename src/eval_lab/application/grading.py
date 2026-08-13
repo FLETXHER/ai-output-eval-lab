@@ -10,7 +10,7 @@ from eval_lab.application.packets import build_blind_grader_packet
 from eval_lab.application.prompts import WorkflowError
 from eval_lab.domain.grader_contract import normalize_grader_payload
 from eval_lab.domain.status import aggregate_calculated_status
-from eval_lab.imports.grader_results import parse_grader_payload
+from eval_lab.imports.grader_results import parse_grader_payload, parse_grader_payload_text
 from eval_lab.repositories.sqlite import (
     insert_evaluation_result,
     insert_grader_fact_results,
@@ -97,6 +97,22 @@ def import_grader_result(
         ],
     )
     return result_id
+
+
+def import_grader_result_text(
+    conn: sqlite3.Connection,
+    model_output_id: int,
+    grader_condition: Mapping[str, object],
+    raw_payload_text: str,
+) -> int:
+    """Import untouched Grader JSON text after strict Imports-boundary parsing."""
+    case_id = _case_id_for_output(conn, model_output_id)
+    case = load_case(conn, case_id)
+    required_fact_ids = _required_fact_ids(case)
+    validation = parse_grader_payload_text(raw_payload_text, required_fact_ids)
+    if not validation["ok"] or validation["value"] is None:
+        raise WorkflowError("invalid grader JSON: " + "; ".join(validation["errors"]))
+    return import_grader_result(conn, model_output_id, grader_condition, validation["value"])
 
 
 def calculate_output_status(

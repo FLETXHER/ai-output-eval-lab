@@ -12,6 +12,7 @@ from eval_lab.application.grading import (
     build_blind_grader_packet_for_output,
     calculate_output_status,
     import_grader_result,
+    import_grader_result_text,
 )
 from eval_lab.application.cases import load_case
 from eval_lab.application.outputs import evaluate_output_rules, record_model_output
@@ -162,6 +163,19 @@ def test_grader_import_rejects_invalid_or_mismatched_payload_and_duplicate_outpu
     import_grader_result(conn, output_id, condition, valid)
     with pytest.raises(WorkflowError, match="already exists"):
         import_grader_result(conn, output_id, condition, valid)
+
+
+@pytest.mark.parametrize("raw_text", ["{not JSON}", "```json\n{}\n```", "[]"])
+def test_grader_text_import_rejects_malformed_fenced_or_non_object_without_writes(
+    conn, repo_root: Path, raw_text: str
+) -> None:
+    output_id, _ = _setup_output(conn)
+    condition_id = insert_grader_condition(conn, _condition_data())
+    condition = dict(conn.execute("SELECT * FROM grader_conditions WHERE id = ?", (condition_id,)).fetchone())
+    with pytest.raises(WorkflowError, match="invalid grader JSON"):
+        import_grader_result_text(conn, output_id, condition, raw_text)
+    assert conn.execute("SELECT COUNT(*) FROM grader_results").fetchone()[0] == 0
+    assert conn.execute("SELECT COUNT(*) FROM grader_fact_results").fetchone()[0] == 0
 
 
 def test_calculated_status_uses_only_rules_and_grader_not_human_review(conn, repo_root: Path) -> None:
