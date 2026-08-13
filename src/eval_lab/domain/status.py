@@ -79,7 +79,16 @@ def _semantic_indeterminate_reasons(grader_result: Mapping[str, object]) -> list
         isinstance(fact, Mapping) and fact.get("label") == "indeterminate" for fact in facts
     ):
         reasons.append("required fact is indeterminate")
+    if not reasons and _has_declared_ambiguous_evidence(grader_result):
+        reasons.append("groundedness evidence is ambiguous")
     return reasons
+
+
+def _has_declared_ambiguous_evidence(grader_result: Mapping[str, object]) -> bool:
+    if grader_result.get("primary_error_type") == "ambiguous_evidence":
+        return True
+    secondary = grader_result.get("secondary_error_types")
+    return isinstance(secondary, list) and "ambiguous_evidence" in secondary
 
 
 def _all_rules_pass(rule_results: Sequence[Mapping[str, object]]) -> bool:

@@ -90,8 +90,28 @@ def test_draft_assets_capture_the_full_blind_grader_contract_and_methodology(
     assert "不替代 deterministic schema" in taxonomy
     assert "other" in grader_prompt and "已记录且不属于前五类" in grader_prompt
     assert "grader_reason 必须具体说明该诊断及其证据和理由" in grader_prompt
+    assert "不要把它强行放入 unsupported_claims" in grader_prompt
+    assert "具体相关 output evidence、对应 source / annotation，以及无法可靠判定 supported / unsupported 的原因" in grader_prompt
+    assert "按 error taxonomy 的固定优先级" in grader_prompt
+    assert "按 rubric 的固定优先级" not in grader_prompt
     assert "other" in taxonomy and "已记录且不属于前五类" in taxonomy
     assert "grader_reason" in taxonomy and "证据和诊断理由" in taxonomy
+
+
+def test_semantic_gap_revision_changes_only_the_grader_prompt_asset(
+    draft_assets: dict[str, object],
+) -> None:
+    by_type = {asset["asset_type"]: asset for asset in draft_assets["assets"]}
+
+    assert by_type["prompt_v1"]["content_hash"] == (
+        "07aa48853dbe0ed54ff88a2476ce6ec9be2cac4d2680dc2b41d0fc36c392ae4f"
+    )
+    assert by_type["rubric_v1"]["content_hash"] == (
+        "719cbba979f3657f5c164d947a03b02b77b8818c487259b8c850f68dd577b8eb"
+    )
+    assert by_type["error_taxonomy_v1"]["content_hash"] == (
+        "ea8324fe5e865c1bb5bba755925b1fca452c90a49070d15dcfad32865a5d6338"
+    )
 
 
 @pytest.mark.parametrize(

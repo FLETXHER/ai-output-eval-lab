@@ -145,6 +145,46 @@ def test_valid_indeterminate_required_fact_keeps_status_indeterminate() -> None:
     assert result["calculated_status"] == "indeterminate"
 
 
+def test_declared_groundedness_ambiguity_is_valid_and_indeterminate() -> None:
+    grader = valid_grader(
+        primary_error_type="ambiguous_evidence",
+        grader_reason=(
+            "输出称该功能可在雨天使用，但 source 对环境限制的描述与 annotation 冲突，"
+            "因此无法可靠判定该命题是否得到支持。"
+        ),
+    )
+
+    result = aggregate_calculated_status(
+        [{"rule_key": "schema_pass", "status": "pass"}], grader, ["F01"]
+    )
+
+    assert result["calculated_status"] == "indeterminate"
+    assert result["blocking_reasons"] == ["groundedness evidence is ambiguous"]
+
+
+def test_semantic_fail_wins_over_declared_groundedness_ambiguity() -> None:
+    grader = valid_grader(
+        unsupported_claims=[
+            {
+                "claim": "支持雨天使用。",
+                "output_evidence": "支持雨天使用。",
+                "supporting_fact_ids": [],
+                "reason": "source 没有直接支持该命题。",
+            }
+        ],
+        primary_error_type="unsupported_claim",
+        secondary_error_types=["ambiguous_evidence"],
+        grader_reason="输出存在一项不支持命题，另有一项事实命题证据真实歧义。",
+    )
+
+    result = aggregate_calculated_status(
+        [{"rule_key": "schema_pass", "status": "pass"}], grader, ["F01"]
+    )
+
+    assert result["calculated_status"] == "fail"
+    assert result["blocking_reasons"] == ["unsupported claims detected"]
+
+
 def test_valid_diagnostics_do_not_affect_passing_status() -> None:
     result = aggregate_calculated_status(
         [{"rule_key": "schema_pass", "status": "pass"}],

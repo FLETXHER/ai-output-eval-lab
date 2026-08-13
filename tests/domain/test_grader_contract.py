@@ -228,6 +228,36 @@ def test_taxonomy_rejects_other_as_primary_when_required_secondary_set_is_missin
     assert any("every other detected diagnostic" in error for error in errors)
 
 
+def test_taxonomy_allows_explicit_groundedness_ambiguity_with_documented_reason() -> None:
+    payload = valid_payload()
+    payload["primary_error_type"] = "ambiguous_evidence"
+    payload["grader_reason"] = (
+        "输出称该功能可在雨天使用，但 source 对环境限制的描述与 annotation 冲突，"
+        "因此无法可靠判定该命题是否得到支持。"
+    )
+
+    assert validate_grader_payload(payload, ["F01", "F02"]) == []
+
+
+def test_taxonomy_rejects_declared_ambiguity_that_violates_priority() -> None:
+    payload = valid_payload()
+    payload["unsupported_claims"] = [
+        {
+            "claim": "支持雨天使用。",
+            "output_evidence": "支持雨天使用。",
+            "supporting_fact_ids": [],
+            "reason": "source 没有直接支持该命题。",
+        }
+    ]
+    payload["primary_error_type"] = "ambiguous_evidence"
+    payload["secondary_error_types"] = ["unsupported_claim"]
+    payload["grader_reason"] = "该输出同时包含不支持命题和一项真实语义歧义。"
+
+    errors = validate_grader_payload(payload, ["F01", "F02"])
+
+    assert any("primary_error_type must be 'unsupported_claim'" in error for error in errors)
+
+
 def test_language_hard_criterion_requires_complete_evidence() -> None:
     payload = valid_payload()
     payload["language_compliance"] = {
