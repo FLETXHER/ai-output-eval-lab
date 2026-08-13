@@ -120,10 +120,7 @@ def _setup_output(conn: sqlite3.Connection, *, label: str = "v1", group: str = "
 
 
 def _payload(repo_root: Path, name: str, packet: dict[str, object]) -> dict[str, object]:
-    payload = json.loads((repo_root / "tests" / "fixtures" / name).read_text(encoding="utf-8"))
-    payload["blind_packet_version"] = packet["packet_version"]
-    payload["blind_packet_hash"] = packet["content_hash"]
-    return payload
+    return json.loads((repo_root / "tests" / "fixtures" / name).read_text(encoding="utf-8"))
 
 
 def test_imports_valid_grader_result_with_snapshots_fact_rows_and_packet_provenance(conn, repo_root: Path) -> None:
@@ -165,12 +162,37 @@ def test_grader_import_rejects_invalid_or_mismatched_payload_and_duplicate_outpu
 
     valid = _payload(repo_root, "demo_grader_valid.json", packet)
     valid["blind_packet_hash"] = "f" * 64
-    with pytest.raises(WorkflowError, match="packet provenance"):
+    with pytest.raises(WorkflowError, match="invalid grader payload"):
         import_grader_result(conn, output_id, condition, valid)
-    valid["blind_packet_hash"] = packet["content_hash"]
+    valid.pop("blind_packet_hash")
     import_grader_result(conn, output_id, condition, valid)
     with pytest.raises(WorkflowError, match="already exists"):
         import_grader_result(conn, output_id, condition, valid)
+
+
+def test_grader_text_import_accepts_exact_seven_field_json_and_attaches_internal_packet_provenance(
+    conn: sqlite3.Connection, repo_root: Path
+) -> None:
+    output_id, _ = _setup_output(conn)
+    condition_id = insert_grader_condition(conn, _condition_data())
+    condition = dict(conn.execute("SELECT * FROM grader_conditions WHERE id = ?", (condition_id,)).fetchone())
+    packet = build_blind_grader_packet_for_output(conn, output_id, condition_id)
+    raw_text = (repo_root / "tests" / "fixtures" / "demo_grader_valid.json").read_text(encoding="utf-8")
+
+    result_id = import_grader_result_text(conn, output_id, condition, raw_text)
+    stored = conn.execute("SELECT * FROM grader_results WHERE id = ?", (result_id,)).fetchone()
+    stored_raw = json.loads(stored["raw_payload_json"])
+    assert set(stored_raw) == {
+        "language_compliance",
+        "required_facts",
+        "unsupported_claims",
+        "readability",
+        "primary_error_type",
+        "secondary_error_types",
+        "grader_reason",
+    }
+    assert stored["blind_packet_version"] == packet["packet_version"]
+    assert stored["blind_packet_hash"] == packet["content_hash"]
 
 
 @pytest.mark.parametrize("raw_text", ["{not JSON}", "```json\n{}\n```", "[]"])
@@ -275,6 +297,7 @@ def test_application_threads_all_source_fact_ids_to_grader_validation(conn, repo
             "reason": "F02 was checked but does not support the negative claim.",
         }
     ]
+    payload["primary_error_type"] = "unsupported_claim"
 
     result_id = import_grader_result(conn, output_id, condition, payload)
     assert result_id > 0

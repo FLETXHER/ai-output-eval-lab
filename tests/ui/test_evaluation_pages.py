@@ -136,8 +136,6 @@ def _store_indeterminate_result(db_path, repo_root, ids: dict[str, int]) -> int:
     condition = dict(conn.execute("SELECT * FROM grader_conditions WHERE id = ?", (ids["condition_id"],)).fetchone())
     packet = build_blind_grader_packet(conn, output_id, ids["condition_id"])
     payload = json.loads((repo_root / "tests" / "fixtures" / "demo_grader_indeterminate.json").read_text(encoding="utf-8"))
-    payload["blind_packet_version"] = packet["packet_version"]
-    payload["blind_packet_hash"] = packet["content_hash"]
     grader_id = import_grader_result(conn, output_id, condition, payload)
     result_id = calculate_output_status(conn, output_id, grader_id, ids["condition_id"])
     conn.close()
@@ -216,6 +214,42 @@ def test_evaluation_ui_passes_raw_grader_text_to_application_without_json_repair
     assert page.error
     conn = connect(temporary_db_path)
     assert conn.execute("SELECT COUNT(*) FROM grader_results").fetchone()[0] == 0
+    conn.close()
+
+
+def test_evaluation_ui_imports_exact_seven_field_json_and_stores_packet_provenance(
+    temporary_db_path, repo_root
+) -> None:
+    ids = _seed(temporary_db_path, repo_root)
+    conn = connect(temporary_db_path)
+    output_id = record_model_output(
+        conn, ids["run_id"], ids["case_id"], "generation-1.0", "a" * 64, "raw candidate", NOW
+    )
+    packet = build_blind_grader_packet(conn, output_id, ids["condition_id"])
+    conn.close()
+    raw_text = (repo_root / "tests" / "fixtures" / "demo_grader_valid.json").read_text(encoding="utf-8")
+
+    page = _page_test("pages.evaluation", str(temporary_db_path), str(repo_root))
+    page.text_area[0].set_value(raw_text)
+    page.button[0].click().run()
+    assert not page.exception
+    assert page.success
+    conn = connect(temporary_db_path)
+    stored = conn.execute(
+        "SELECT * FROM grader_results WHERE model_output_id = ?", (output_id,)
+    ).fetchone()
+    assert stored is not None
+    assert set(json.loads(stored["raw_payload_json"])) == {
+        "language_compliance",
+        "required_facts",
+        "unsupported_claims",
+        "readability",
+        "primary_error_type",
+        "secondary_error_types",
+        "grader_reason",
+    }
+    assert stored["blind_packet_version"] == packet["packet_version"]
+    assert stored["blind_packet_hash"] == packet["content_hash"]
     conn.close()
 
 

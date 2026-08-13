@@ -24,9 +24,9 @@ def valid_payload() -> dict[str, object]:
             },
             {
                 "fact_id": "F02",
-                "label": "not_met",
-                "output_evidence": "Evidence was not found in the output.",
-                "reason": "The location is absent.",
+                "label": "met",
+                "output_evidence": "The location is stated.",
+                "reason": "The required location appears in the output.",
             },
         ],
         "unsupported_claims": [],
@@ -143,6 +143,7 @@ def test_unsupported_claims_may_reference_any_source_fact_not_only_required_fact
             "reason": "F03 was checked but does not support the claim.",
         }
     ]
+    payload["primary_error_type"] = "unsupported_claim"
 
     assert validate_grader_payload(payload, ["F01", "F02"], ["F01", "F02", "F03"]) == []
     unknown = payload.copy()
@@ -159,6 +160,45 @@ def test_readability_label_is_a_three_state_diagnostic() -> None:
     assert any("readability.label" in error for error in validate_grader_payload(payload, ["F01", "F02"]))
 
 
+def test_taxonomy_uses_fixed_priority_and_all_remaining_diagnostics_as_secondary() -> None:
+    payload = valid_payload()
+    payload["required_facts"][0]["label"] = "not_met"  # type: ignore[index]
+    payload["required_facts"][0]["output_evidence"] = ""  # type: ignore[index]
+    payload["unsupported_claims"] = [
+        {
+            "claim": "Unsupported claim.",
+            "output_evidence": "输出证据。",
+            "supporting_fact_ids": [],
+            "reason": "Source does not support it.",
+        }
+    ]
+    payload["language_compliance"]["label"] = "fail"  # type: ignore[index]
+    payload["readability"]["label"] = "fail"  # type: ignore[index]
+    payload["primary_error_type"] = "unsupported_claim"
+    payload["secondary_error_types"] = [
+        "required_fact_missing",
+        "language_noncompliance",
+        "readability_issue",
+    ]
+    assert validate_grader_payload(payload, ["F01", "F02"]) == []
+
+    payload["secondary_error_types"] = ["required_fact_missing"]
+    assert any(
+        "every other detected diagnostic" in error
+        for error in validate_grader_payload(payload, ["F01", "F02"])
+    )
+
+
+def test_taxonomy_rejects_arbitrary_duplicate_or_primary_secondary_values() -> None:
+    payload = valid_payload()
+    payload["readability"]["label"] = "fail"  # type: ignore[index]
+    payload["primary_error_type"] = "readability_issue"
+    payload["secondary_error_types"] = ["readability_issue", "readability_issue"]
+    errors = validate_grader_payload(payload, ["F01", "F02"])
+    assert any("duplicates" in error for error in errors)
+    assert any("must not contain primary_error_type" in error for error in errors)
+
+
 def test_language_hard_criterion_requires_complete_evidence() -> None:
     payload = valid_payload()
     payload["language_compliance"] = {
@@ -166,6 +206,7 @@ def test_language_hard_criterion_requires_complete_evidence() -> None:
         "reason": "The output switches languages.",
         "evidence": "The summary contains English sentences.",
     }
+    payload["primary_error_type"] = "language_noncompliance"
 
     assert validate_grader_payload(payload, ["F01", "F02"]) == []
 

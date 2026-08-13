@@ -57,7 +57,8 @@ def test_semantic_failures_override_passing_deterministic_rules() -> None:
                 "supporting_fact_ids": [],
                 "reason": "The source facts do not support this claim.",
             }
-        ]
+        ],
+        primary_error_type="unsupported_claim",
     )
 
     result = aggregate_calculated_status(
@@ -75,7 +76,8 @@ def test_language_indeterminate_keeps_result_indeterminate() -> None:
             "label": "indeterminate",
             "reason": "Language cannot be reliably determined.",
             "evidence": "The response contains too little readable text.",
-        }
+        },
+        primary_error_type="ambiguous_evidence",
     )
 
     result = aggregate_calculated_status(
@@ -94,7 +96,8 @@ def test_valid_language_failure_fails_calculated_status() -> None:
                 "label": "fail",
                 "reason": "The output switches languages.",
                 "evidence": "The summary contains English sentences.",
-            }
+            },
+            primary_error_type="language_noncompliance",
         ),
         ["F01"],
     )
@@ -113,7 +116,8 @@ def test_valid_missing_required_fact_fails_calculated_status() -> None:
                     "output_evidence": "Evidence was not found in the output.",
                     "reason": "The date is absent.",
                 }
-            ]
+            ],
+            primary_error_type="required_fact_missing",
         ),
         ["F01"],
     )
@@ -132,7 +136,8 @@ def test_valid_indeterminate_required_fact_keeps_status_indeterminate() -> None:
                     "output_evidence": "Evidence was not found in the output.",
                     "reason": "The output cannot be reliably read.",
                 }
-            ]
+            ],
+            primary_error_type="ambiguous_evidence",
         ),
         ["F01"],
     )
@@ -149,8 +154,8 @@ def test_valid_diagnostics_do_not_affect_passing_status() -> None:
                 "reason": "Dense text.",
                 "evidence": "The summary is one long paragraph.",
             },
-            primary_error_type="readability",
-            secondary_error_types=["style"],
+            primary_error_type="readability_issue",
+            secondary_error_types=[],
         ),
         ["F01"],
     )
@@ -166,8 +171,8 @@ def test_invalid_grader_payload_is_indeterminate_and_diagnostics_do_not_change_s
             "reason": "Dense text.",
             "evidence": "Long paragraph.",
         },
-        primary_error_type="readability",
-        secondary_error_types=["style"],
+        primary_error_type="readability_issue",
+        secondary_error_types=[],
     )
 
     result = aggregate_calculated_status(

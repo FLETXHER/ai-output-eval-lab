@@ -65,11 +65,6 @@ def import_grader_result(
     if not validation["ok"] or validation["value"] is None:
         raise WorkflowError("invalid grader payload: " + "; ".join(validation["errors"]))
     value = validation["value"]
-    if (
-        value["blind_packet_version"] != packet["packet_version"]
-        or value["blind_packet_hash"] != packet["content_hash"]
-    ):
-        raise WorkflowError("grader packet provenance does not match the rendered packet")
     if conn.execute(
         "SELECT 1 FROM grader_results WHERE model_output_id = ? AND grader_condition_id = ?",
         (model_output_id, condition_id),
@@ -77,7 +72,7 @@ def import_grader_result(
         raise WorkflowError("a grader result already exists for this output and condition")
 
     semantic = normalize_grader_payload(
-        {key: item for key, item in value.items() if not key.startswith("blind_packet_")},
+        value,
         required_fact_ids,
         source_fact_ids,
     )
@@ -87,8 +82,8 @@ def import_grader_result(
         {
             "model_output_id": model_output_id,
             "grader_condition_id": condition_id,
-            "blind_packet_version": value["blind_packet_version"],
-            "blind_packet_hash": value["blind_packet_hash"],
+            "blind_packet_version": packet["packet_version"],
+            "blind_packet_hash": packet["content_hash"],
             "raw_payload": dict(raw_payload),
             "import_status": "valid",
             "normalized_semantic": semantic,

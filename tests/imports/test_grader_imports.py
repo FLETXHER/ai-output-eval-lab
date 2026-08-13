@@ -3,8 +3,6 @@ from eval_lab.imports.grader_results import parse_grader_payload
 
 def _valid_payload() -> dict[str, object]:
     return {
-        "blind_packet_version": "blind-grader-1.0",
-        "blind_packet_hash": "b" * 64,
         "language_compliance": {
             "label": "pass",
             "reason": "主体为简体中文。",
@@ -61,14 +59,14 @@ def test_grader_rejects_forbidden_blind_metadata() -> None:
     assert any("blind metadata" in error for error in result["errors"])
 
 
-def test_grader_rejects_missing_packet_provenance() -> None:
+def test_grader_rejects_internal_packet_provenance_fields_in_external_json() -> None:
     payload = _valid_payload()
-    del payload["blind_packet_hash"]
+    payload["blind_packet_hash"] = "b" * 64
 
     result = parse_grader_payload(payload, ["F01"])
 
     assert result["ok"] is False
-    assert any("blind_packet_hash" in error for error in result["errors"])
+    assert any("unsupported keys" in error for error in result["errors"])
 
 
 def test_import_validation_accepts_supporting_non_required_source_fact() -> None:
@@ -81,6 +79,7 @@ def test_import_validation_accepts_supporting_non_required_source_fact() -> None
             "reason": "F02 was checked but is insufficient support.",
         }
     ]
+    payload["primary_error_type"] = "unsupported_claim"
     result = parse_grader_payload(payload, ["F01"], ["F01", "F02"])
     assert result["ok"] is True
 

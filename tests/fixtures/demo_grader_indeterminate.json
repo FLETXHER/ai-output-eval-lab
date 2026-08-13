@@ -1,6 +1,4 @@
 {
-  "blind_packet_version": "blind-grader-1.0",
-  "blind_packet_hash": "__RENDERED_PACKET_HASH__",
   "language_compliance": {
     "label": "indeterminate",
     "reason": "The candidate text is too limited to determine the primary language.",

@@ -61,13 +61,13 @@ def _make_results(conn: sqlite3.Connection, repo_root: Path, *, total: int = 5) 
         evaluate_output_rules(conn, output_id, TASK_PACK_CONTRACT, [])
         packet = build_blind_grader_packet_for_output(conn, output_id, condition_id)
         payload = json.loads((repo_root / "tests" / "fixtures" / "demo_grader_valid.json").read_text(encoding="utf-8"))
-        payload["blind_packet_version"] = packet["packet_version"]
-        payload["blind_packet_hash"] = packet["content_hash"]
         if index == 0:
             payload["language_compliance"] = {"label": "indeterminate", "reason": "ambiguous", "evidence": "limited"}
             payload["required_facts"][0]["label"] = "indeterminate"
+            payload["primary_error_type"] = "ambiguous_evidence"
         if index == 1:
             payload["unsupported_claims"] = [{"claim": "unsupported", "output_evidence": "unsupported", "supporting_fact_ids": [], "reason": "not in source"}]
+            payload["primary_error_type"] = "unsupported_claim"
         grader_id = import_grader_result(conn, output_id, condition, payload)
         results.append(calculate_output_status(conn, output_id, grader_id, condition_id))
     return results, condition_id

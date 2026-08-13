@@ -7,16 +7,12 @@ from eval_lab.imports import (
     ValidationResult,
     exact_keys,
     invalid,
-    non_empty_string,
     parse_json_text,
-    sha256_hash,
     valid,
 )
 
 
 _GRADER_FIELDS = {
-    "blind_packet_version",
-    "blind_packet_hash",
     "language_compliance",
     "required_facts",
     "unsupported_claims",
@@ -54,13 +50,7 @@ def parse_grader_payload(
     errors = exact_keys(payload, _GRADER_FIELDS, "grader payload")
     if _FORBIDDEN_BLIND_METADATA & set(payload):
         errors.append("grader payload contains forbidden blind metadata")
-    errors.extend(non_empty_string(payload.get("blind_packet_version"), "blind_packet_version"))
-    errors.extend(sha256_hash(payload.get("blind_packet_hash"), "blind_packet_hash"))
-
-    semantic_payload = {
-        key: value for key, value in payload.items() if key not in {"blind_packet_version", "blind_packet_hash"}
-    }
-    errors.extend(validate_grader_payload(semantic_payload, required_fact_ids, source_fact_ids))
+    errors.extend(validate_grader_payload(payload, required_fact_ids, source_fact_ids))
     return invalid(errors) if errors else valid(payload)
 
 

@@ -15,6 +15,22 @@ _ROOT_KEYS = {
 _LANGUAGE_LABELS = {"pass", "fail", "indeterminate"}
 _FACT_LABELS = {"met", "not_met", "indeterminate"}
 _READABILITY_LABELS = {"pass", "fail", "indeterminate"}
+_ERROR_TYPES = {
+    "unsupported_claim",
+    "required_fact_missing",
+    "language_noncompliance",
+    "ambiguous_evidence",
+    "readability_issue",
+    "other",
+}
+_ERROR_PRIORITY = (
+    "unsupported_claim",
+    "required_fact_missing",
+    "language_noncompliance",
+    "ambiguous_evidence",
+    "readability_issue",
+    "other",
+)
 
 
 def normalize_grader_payload(
@@ -102,6 +118,8 @@ def validate_grader_payload(
         not _non_empty_string(error_type) for error_type in secondary_error_types
     ):
         errors.append("secondary_error_types must be a list of diagnostic strings")
+
+    _validate_error_taxonomy(payload, errors)
 
     if not _non_empty_string(payload.get("grader_reason")):
         errors.append("grader_reason must be a non-empty string")
@@ -222,6 +240,82 @@ def _validate_readability(value: object, errors: list[str]) -> None:
         errors.append("readability.label must be pass, fail, or indeterminate")
     _require_non_empty(value.get("reason"), "readability.reason", errors)
     _require_non_empty(value.get("evidence"), "readability.evidence", errors)
+
+
+def _validate_error_taxonomy(payload: Mapping[str, object], errors: list[str]) -> None:
+    """Ensure diagnostics are represented by the fixed, evidence-derived taxonomy."""
+    detected = _detected_error_types(payload)
+    primary = payload.get("primary_error_type")
+    secondary = payload.get("secondary_error_types")
+
+    if not detected:
+        if primary is not None:
+            errors.append("primary_error_type must be null when no diagnostic error is detected")
+        if secondary != []:
+            errors.append("secondary_error_types must be [] when no diagnostic error is detected")
+        return
+
+    expected_primary = next(
+        error_type for error_type in _ERROR_PRIORITY if error_type in detected
+    )
+    if primary != expected_primary:
+        errors.append(
+            f"primary_error_type must be {expected_primary!r} for the detected diagnostics"
+        )
+
+    if not isinstance(secondary, list):
+        return
+    normalized_secondary = [
+        item.strip() for item in secondary if isinstance(item, str)
+    ]
+    if len(normalized_secondary) != len(set(normalized_secondary)):
+        errors.append("secondary_error_types must not contain duplicates")
+    if primary is not None and primary in normalized_secondary:
+        errors.append("secondary_error_types must not contain primary_error_type")
+    for error_type in normalized_secondary:
+        if error_type not in _ERROR_TYPES:
+            errors.append(f"secondary_error_types contains unsupported error type {error_type!r}")
+        elif error_type not in detected:
+            errors.append(
+                f"secondary_error_types contains undetected error type {error_type!r}"
+            )
+    if isinstance(primary, str) and primary in detected:
+        expected_secondary = detected - {primary}
+        if set(normalized_secondary) != expected_secondary:
+            errors.append(
+                "secondary_error_types must contain every other detected diagnostic exactly once"
+            )
+
+
+def _detected_error_types(payload: Mapping[str, object]) -> set[str]:
+    detected: set[str] = set()
+    unsupported_claims = payload.get("unsupported_claims")
+    if isinstance(unsupported_claims, list) and unsupported_claims:
+        detected.add("unsupported_claim")
+
+    required_facts = payload.get("required_facts")
+    if isinstance(required_facts, list):
+        labels = {
+            fact.get("label")
+            for fact in required_facts
+            if isinstance(fact, Mapping)
+        }
+        if "not_met" in labels:
+            detected.add("required_fact_missing")
+        if "indeterminate" in labels:
+            detected.add("ambiguous_evidence")
+
+    language = payload.get("language_compliance")
+    if isinstance(language, Mapping):
+        if language.get("label") == "fail":
+            detected.add("language_noncompliance")
+        elif language.get("label") == "indeterminate":
+            detected.add("ambiguous_evidence")
+
+    readability = payload.get("readability")
+    if isinstance(readability, Mapping) and readability.get("label") == "fail":
+        detected.add("readability_issue")
+    return detected
 
 
 def _validate_exact_keys(
