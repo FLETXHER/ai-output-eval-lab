@@ -148,6 +148,31 @@ def list_test_cases(
     ))
 
 
+def list_task_packs(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Return the fixed Task Pack records for metadata display."""
+    return list(conn.execute("SELECT * FROM task_packs ORDER BY pack_key"))
+
+
+def list_prompt_versions(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Return Prompt provenance records without exposing an edit path."""
+    return list(
+        conn.execute(
+            "SELECT * FROM prompt_versions ORDER BY created_at, id"
+        )
+    )
+
+
+def metadata_counts(conn: sqlite3.Connection) -> dict[str, int]:
+    """Return read-only Overview counts through the persistence boundary."""
+    return {
+        "task_packs": int(conn.execute("SELECT COUNT(*) FROM task_packs").fetchone()[0]),
+        "test_cases": int(conn.execute("SELECT COUNT(*) FROM test_cases").fetchone()[0]),
+        "prompt_versions": int(
+            conn.execute("SELECT COUNT(*) FROM prompt_versions").fetchone()[0]
+        ),
+    }
+
+
 def insert_prompt_version(conn: sqlite3.Connection, data: Mapping[str, object]) -> int:
     return _insert(
         conn,
