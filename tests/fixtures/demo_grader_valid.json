@@ -16,7 +16,7 @@
   ],
   "unsupported_claims": [],
   "readability": {
-    "label": "good",
+    "label": "pass",
     "reason": "The response is concise.",
     "evidence": "The JSON fields are readable."
   },

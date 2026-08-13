@@ -64,6 +64,32 @@ def test_checked_in_assets_are_reproducible_drafts_not_formal(draft_assets) -> N
     ]
 
 
+def test_draft_assets_capture_the_full_blind_grader_contract_and_methodology(
+    draft_assets: dict[str, object],
+) -> None:
+    by_type = {asset["asset_type"]: asset for asset in draft_assets["assets"]}
+    grader_prompt = by_type["grader_prompt_v1"]["content"]
+    rubric = by_type["rubric_v1"]["content"]
+    taxonomy = by_type["error_taxonomy_v1"]["content"]
+    assert "language_compliance" in grader_prompt
+    assert "required_facts" in grader_prompt
+    assert "unsupported_claims" in grader_prompt
+    assert "readability" in grader_prompt
+    assert "primary_error_type" in grader_prompt
+    assert "secondary_error_types" in grader_prompt
+    assert "grader_reason" in grader_prompt
+    assert "只能包含" in grader_prompt
+    assert "not_met 或 indeterminate" in grader_prompt
+    assert "source_facts 中存在的 fact_id" in grader_prompt
+    assert "source_material 是唯一事实来源" in rubric
+    assert "同义改写" in rubric and "合并表达" in rubric
+    assert "source 未表达某事实不等于 source 表达了该事实的否定" in rubric
+    assert "因果关系" in rubric and "比较关系" in rubric and "程度或性能" in rubric
+    assert "unsupported_claim > required_fact_missing" in taxonomy
+    assert "secondary_error_types 不得包含 primary_error_type" in taxonomy
+    assert "不替代 deterministic schema" in taxonomy
+
+
 @pytest.mark.parametrize(
     ("mutate", "expected"),
     [

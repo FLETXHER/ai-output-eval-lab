@@ -76,21 +76,23 @@ def test_rejects_invalid_labels_and_unsupported_fact_ids() -> None:
     assert any("unsupported fact_id" in error for error in errors)
 
 
-def test_requires_evidence_and_reason_for_facts_including_indeterminate() -> None:
+def test_met_requires_evidence_but_not_met_and_indeterminate_may_be_empty() -> None:
     payload = valid_payload()
     payload["required_facts"][0]["output_evidence"] = " "  # type: ignore[index]
     payload["required_facts"][1] = {
         "fact_id": "F02",
         "label": "indeterminate",
         "output_evidence": " ",
-        "reason": " ",
+        "reason": "Evidence is ambiguous.",
     }
 
     errors = validate_grader_payload(payload, ["F01", "F02"])
 
     assert any("required_facts[0].output_evidence" in error for error in errors)
-    assert any("required_facts[1].reason" in error for error in errors)
-    assert any("required_facts[1].output_evidence" in error for error in errors)
+    assert not any("required_facts[1].output_evidence" in error for error in errors)
+
+    payload["required_facts"][1]["reason"] = " "  # type: ignore[index]
+    assert any("required_facts[1].reason" in error for error in validate_grader_payload(payload, ["F01", "F02"]))
 
 
 def test_rejects_malformed_unsupported_claims_and_blind_metadata() -> None:
@@ -129,6 +131,32 @@ def test_rejects_unsupported_claim_supporting_fact_ids() -> None:
     errors = validate_grader_payload(payload, ["F01", "F02"])
 
     assert any("unsupported supporting_fact_id 'UNKNOWN'" in error for error in errors)
+
+
+def test_unsupported_claims_may_reference_any_source_fact_not_only_required_facts() -> None:
+    payload = valid_payload()
+    payload["unsupported_claims"] = [
+        {
+            "claim": "The package includes a cable.",
+            "output_evidence": "包装包含数据线。",
+            "supporting_fact_ids": ["F03"],
+            "reason": "F03 was checked but does not support the claim.",
+        }
+    ]
+
+    assert validate_grader_payload(payload, ["F01", "F02"], ["F01", "F02", "F03"]) == []
+    unknown = payload.copy()
+    unknown["unsupported_claims"] = [dict(payload["unsupported_claims"][0], supporting_fact_ids=["F99"])]  # type: ignore[index]
+    assert any(
+        "unsupported supporting_fact_id 'F99'" in error
+        for error in validate_grader_payload(unknown, ["F01", "F02"], ["F01", "F02", "F03"])
+    )
+
+
+def test_readability_label_is_a_three_state_diagnostic() -> None:
+    payload = valid_payload()
+    payload["readability"]["label"] = "good"  # type: ignore[index]
+    assert any("readability.label" in error for error in validate_grader_payload(payload, ["F01", "F02"]))
 
 
 def test_language_hard_criterion_requires_complete_evidence() -> None:

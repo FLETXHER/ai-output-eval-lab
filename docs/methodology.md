@@ -73,6 +73,17 @@ Prompt. Prompt v2 may be drafted only after a closed Dev Prompt v1 run has
 stored evaluation results and a non-empty evidence-based change reason; it is
 still a draft until separately owner-approved and frozen.
 
+The drafted Grader Prompt v1 records the strict pointwise JSON result contract:
+the root contains exactly the seven semantic fields, required facts appear
+exactly once, `met` requires non-empty output evidence while `not_met` and
+`indeterminate` may use an empty evidence string, and `readability.label` is
+one of `pass`, `fail`, or `indeterminate`. Unsupported-claim evidence may
+reference any legal `source_facts.fact_id`, not only required facts; unknown
+fact IDs are rejected at the Imports/Domain boundary. The rubric and taxonomy
+also preserve the closed-world source precedence, ambiguity handling, fixed
+diagnostic priority, and the separation from deterministic schema/length
+checks.
+
 ## Split discipline and interpretation
 
 The formal collection, after owner approval only, must contain exactly 18 Dev

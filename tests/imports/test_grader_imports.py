@@ -19,7 +19,7 @@ def _valid_payload() -> dict[str, object]:
             }
         ],
         "unsupported_claims": [],
-        "readability": {"label": "good", "reason": "清晰", "evidence": "结构完整"},
+        "readability": {"label": "pass", "reason": "清晰", "evidence": "结构完整"},
         "primary_error_type": None,
         "secondary_error_types": [],
         "grader_reason": "所有关键事实均已覆盖。",
@@ -69,3 +69,22 @@ def test_grader_rejects_missing_packet_provenance() -> None:
 
     assert result["ok"] is False
     assert any("blind_packet_hash" in error for error in result["errors"])
+
+
+def test_import_validation_accepts_supporting_non_required_source_fact() -> None:
+    payload = _valid_payload()
+    payload["unsupported_claims"] = [
+        {
+            "claim": "The package includes a cable.",
+            "output_evidence": "包装包含数据线。",
+            "supporting_fact_ids": ["F02"],
+            "reason": "F02 was checked but is insufficient support.",
+        }
+    ]
+    result = parse_grader_payload(payload, ["F01"], ["F01", "F02"])
+    assert result["ok"] is True
+
+    payload["unsupported_claims"][0]["supporting_fact_ids"] = ["UNKNOWN"]  # type: ignore[index]
+    result = parse_grader_payload(payload, ["F01"], ["F01", "F02"])
+    assert result["ok"] is False
+    assert any("UNKNOWN" in error for error in result["errors"])

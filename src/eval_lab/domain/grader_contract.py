@@ -14,13 +14,16 @@ _ROOT_KEYS = {
 }
 _LANGUAGE_LABELS = {"pass", "fail", "indeterminate"}
 _FACT_LABELS = {"met", "not_met", "indeterminate"}
+_READABILITY_LABELS = {"pass", "fail", "indeterminate"}
 
 
 def normalize_grader_payload(
-    payload: Mapping[str, object], required_fact_ids: Sequence[str]
+    payload: Mapping[str, object],
+    required_fact_ids: Sequence[str],
+    source_fact_ids: Sequence[str] | None = None,
 ) -> dict[str, object]:
     """Validate and copy a Grader result into the allowlisted Domain contract."""
-    errors = validate_grader_payload(payload, required_fact_ids)
+    errors = validate_grader_payload(payload, required_fact_ids, source_fact_ids)
     if errors:
         raise ValueError("invalid grader payload: " + "; ".join(errors))
 
@@ -62,11 +65,18 @@ def normalize_grader_payload(
 
 
 def validate_grader_payload(
-    payload: Mapping[str, object], required_fact_ids: Sequence[str]
+    payload: Mapping[str, object],
+    required_fact_ids: Sequence[str],
+    source_fact_ids: Sequence[str] | None = None,
 ) -> list[str]:
     """Return contract errors without retaining any grading or experiment metadata."""
     errors: list[str] = []
     required_ids = _validate_required_ids(required_fact_ids, errors)
+    source_ids = _validate_source_ids(
+        required_fact_ids if source_fact_ids is None else source_fact_ids,
+        required_ids,
+        errors,
+    )
 
     if not isinstance(payload, Mapping):
         return [*errors, "grader payload must be an object"]
@@ -80,7 +90,7 @@ def validate_grader_payload(
 
     _validate_language(payload.get("language_compliance"), errors)
     _validate_facts(payload.get("required_facts"), required_ids, errors)
-    _validate_claims(payload.get("unsupported_claims"), required_ids, errors)
+    _validate_claims(payload.get("unsupported_claims"), source_ids, errors)
     _validate_readability(payload.get("readability"), errors)
 
     primary_error_type = payload.get("primary_error_type")
@@ -106,6 +116,21 @@ def _validate_required_ids(required_fact_ids: Sequence[str], errors: list[str]) 
     if len(normalized_ids) != len(set(normalized_ids)):
         errors.append("required_fact_ids must not contain duplicates")
     return set(normalized_ids)
+
+
+def _validate_source_ids(
+    source_fact_ids: Sequence[str], required_ids: set[str], errors: list[str]
+) -> set[str]:
+    fact_ids = list(source_fact_ids)
+    if any(not _non_empty_string(fact_id) for fact_id in fact_ids):
+        errors.append("source_fact_ids must contain non-empty strings")
+    normalized_ids = [fact_id.strip() for fact_id in fact_ids if _non_empty_string(fact_id)]
+    if len(normalized_ids) != len(set(normalized_ids)):
+        errors.append("source_fact_ids must not contain duplicates")
+    source_ids = set(normalized_ids)
+    if not required_ids.issubset(source_ids):
+        errors.append("required_fact_ids must be a subset of source_fact_ids")
+    return source_ids
 
 
 def _validate_language(value: object, errors: list[str]) -> None:
@@ -144,7 +169,11 @@ def _validate_facts(value: object, required_ids: set[str], errors: list[str]) ->
         if fact.get("label") not in _FACT_LABELS:
             errors.append(f"{prefix}.label must be met, not_met, or indeterminate")
         _require_non_empty(fact.get("reason"), f"{prefix}.reason", errors)
-        _require_non_empty(fact.get("output_evidence"), f"{prefix}.output_evidence", errors)
+        output_evidence = fact.get("output_evidence")
+        if not isinstance(output_evidence, str):
+            errors.append(f"{prefix}.output_evidence must be a string")
+        elif fact.get("label") == "met" and not output_evidence.strip():
+            errors.append(f"{prefix}.output_evidence must be a non-empty string")
 
     if len(found_ids) != len(set(found_ids)):
         errors.append("required_facts fact_id values must not contain duplicates")
@@ -189,7 +218,8 @@ def _validate_readability(value: object, errors: list[str]) -> None:
         errors.append("readability must be an object")
         return
     _validate_exact_keys(value, {"label", "reason", "evidence"}, "readability", errors)
-    _require_non_empty(value.get("label"), "readability.label", errors)
+    if value.get("label") not in _READABILITY_LABELS:
+        errors.append("readability.label must be pass, fail, or indeterminate")
     _require_non_empty(value.get("reason"), "readability.reason", errors)
     _require_non_empty(value.get("evidence"), "readability.evidence", errors)
 

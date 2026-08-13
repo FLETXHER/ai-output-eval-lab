@@ -10,6 +10,7 @@ def aggregate_calculated_status(
     grader_result: Mapping[str, object] | None,
     required_fact_ids: Sequence[str],
     aggregation_rule_version: str = "1.0",
+    source_fact_ids: Sequence[str] | None = None,
 ) -> dict[str, object]:
     """Combine automatic evidence only; Human Review never participates."""
     hard_failures = _hard_failure_reasons(rule_results)
@@ -19,7 +20,7 @@ def aggregate_calculated_status(
     if grader_result is None:
         return _result("indeterminate", aggregation_rule_version, ["grader result is missing"])
 
-    if validate_grader_payload(grader_result, required_fact_ids):
+    if validate_grader_payload(grader_result, required_fact_ids, source_fact_ids):
         return _result("indeterminate", aggregation_rule_version, ["invalid grader payload"])
 
     semantic_failures = _semantic_failure_reasons(grader_result)

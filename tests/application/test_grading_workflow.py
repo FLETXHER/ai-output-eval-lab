@@ -49,8 +49,11 @@ def _case_data(case_key: str, split: str = "dev") -> dict[str, object]:
         "case_key": case_key,
         "revision": 1,
         "split": split,
-        "source_material": "Source says the device weighs 120 grams.",
-        "source_facts": [{"fact_id": "F01", "text": "The device weighs 120 grams."}],
+        "source_material": "Source says the device weighs 120 grams and includes a USB-C cable.",
+        "source_facts": [
+            {"fact_id": "F01", "text": "The device weighs 120 grams."},
+            {"fact_id": "F02", "text": "The package includes a USB-C cable."},
+        ],
         "required_fact_ids": ["F01"],
         "explicit_forbidden_claims": ["waterproof"],
         "task_notes": "Include the device weight and return strict JSON.",
@@ -256,3 +259,22 @@ def test_formal_grader_use_requires_owner_approved_condition(conn) -> None:
         build_blind_grader_packet_for_output(conn, output_id, condition_id)["packet_version"]
         == "blind-grader-1.0"
     )
+
+
+def test_application_threads_all_source_fact_ids_to_grader_validation(conn, repo_root: Path) -> None:
+    output_id, _ = _setup_output(conn)
+    condition_id = insert_grader_condition(conn, _condition_data())
+    condition = dict(conn.execute("SELECT * FROM grader_conditions WHERE id = ?", (condition_id,)).fetchone())
+    packet = build_blind_grader_packet_for_output(conn, output_id, condition_id)
+    payload = _payload(repo_root, "demo_grader_valid.json", packet)
+    payload["unsupported_claims"] = [
+        {
+            "claim": "The package includes no cable.",
+            "output_evidence": "输出声称包装不含数据线。",
+            "supporting_fact_ids": ["F02"],
+            "reason": "F02 was checked but does not support the negative claim.",
+        }
+    ]
+
+    result_id = import_grader_result(conn, output_id, condition, payload)
+    assert result_id > 0

@@ -43,7 +43,9 @@ _FORBIDDEN_BLIND_METADATA = {
 
 
 def parse_grader_payload(
-    payload: Mapping[str, object], required_fact_ids: Sequence[str]
+    payload: Mapping[str, object],
+    required_fact_ids: Sequence[str],
+    source_fact_ids: Sequence[str] | None = None,
 ) -> ValidationResult:
     """Validate a blind Grader submission without importing experiment identity."""
     if not isinstance(payload, Mapping):
@@ -58,12 +60,14 @@ def parse_grader_payload(
     semantic_payload = {
         key: value for key, value in payload.items() if key not in {"blind_packet_version", "blind_packet_hash"}
     }
-    errors.extend(validate_grader_payload(semantic_payload, required_fact_ids))
+    errors.extend(validate_grader_payload(semantic_payload, required_fact_ids, source_fact_ids))
     return invalid(errors) if errors else valid(payload)
 
 
 def parse_grader_payload_text(
-    raw_text: str, required_fact_ids: Sequence[str]
+    raw_text: str,
+    required_fact_ids: Sequence[str],
+    source_fact_ids: Sequence[str] | None = None,
 ) -> ValidationResult:
     """Strictly parse external Grader text before validating its required schema."""
     parsed = parse_json_text(raw_text)
@@ -72,4 +76,4 @@ def parse_grader_payload_text(
         return invalid(list(errors) if isinstance(errors, list) else ["invalid JSON"])
     if not isinstance(parsed, Mapping):
         return invalid(["grader payload must be an object"])
-    return parse_grader_payload(parsed, required_fact_ids)
+    return parse_grader_payload(parsed, required_fact_ids, source_fact_ids)

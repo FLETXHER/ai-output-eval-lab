@@ -58,9 +58,10 @@ def import_grader_result(
     case_id = _case_id_for_output(conn, model_output_id)
     case = load_case(conn, case_id)
     required_fact_ids = _required_fact_ids(case)
+    source_fact_ids = _source_fact_ids(case)
     packet = build_blind_grader_packet_for_output(conn, model_output_id, condition_id)
 
-    validation = parse_grader_payload(raw_payload, required_fact_ids)
+    validation = parse_grader_payload(raw_payload, required_fact_ids, source_fact_ids)
     if not validation["ok"] or validation["value"] is None:
         raise WorkflowError("invalid grader payload: " + "; ".join(validation["errors"]))
     value = validation["value"]
@@ -78,6 +79,7 @@ def import_grader_result(
     semantic = normalize_grader_payload(
         {key: item for key, item in value.items() if not key.startswith("blind_packet_")},
         required_fact_ids,
+        source_fact_ids,
     )
     now = _utc_now()
     result_id = insert_grader_result(
@@ -130,7 +132,8 @@ def import_grader_result_text(
     case_id = _case_id_for_output(conn, model_output_id)
     case = load_case(conn, case_id)
     required_fact_ids = _required_fact_ids(case)
-    validation = parse_grader_payload_text(raw_payload_text, required_fact_ids)
+    source_fact_ids = _source_fact_ids(case)
+    validation = parse_grader_payload_text(raw_payload_text, required_fact_ids, source_fact_ids)
     if not validation["ok"] or validation["value"] is None:
         raise WorkflowError("invalid grader JSON: " + "; ".join(validation["errors"]))
     return import_grader_result(conn, model_output_id, grader_condition, validation["value"])
@@ -148,6 +151,7 @@ def calculate_output_status(
     case_id = _case_id_for_output(conn, model_output_id)
     case = load_case(conn, case_id)
     required_fact_ids = _required_fact_ids(case)
+    source_fact_ids = _source_fact_ids(case)
     _stored_condition(
         conn,
         grader_condition_id,
@@ -168,7 +172,7 @@ def calculate_output_status(
         conn, model_output_id, grader_result_id, grader_condition_id
     )
     aggregated = aggregate_calculated_status(
-        rules, grader, required_fact_ids, aggregation_rule_version
+        rules, grader, required_fact_ids, aggregation_rule_version, source_fact_ids
     )
     return insert_evaluation_result(
         conn,
@@ -244,6 +248,18 @@ def _required_fact_ids(case: Mapping[str, object]) -> list[str]:
     if not isinstance(values, list) or any(not isinstance(item, str) for item in values):
         raise WorkflowError("stored required_fact_ids must be a list of strings")
     return values
+
+
+def _source_fact_ids(case: Mapping[str, object]) -> list[str]:
+    values = case["source_facts"]
+    if not isinstance(values, list):
+        raise WorkflowError("stored source_facts must be a list")
+    fact_ids: list[str] = []
+    for fact in values:
+        if not isinstance(fact, Mapping) or not isinstance(fact.get("fact_id"), str):
+            raise WorkflowError("stored source_facts must contain fact_id strings")
+        fact_ids.append(fact["fact_id"])
+    return fact_ids
 
 
 def _load_grader_semantic(

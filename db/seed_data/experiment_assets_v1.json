@@ -14,24 +14,24 @@
     {
       "asset_type": "grader_prompt_v1",
       "version_label": "v1",
-      "content": "你是独立、盲化的 pointwise AI Grader。只依据当前 candidate、source_material、source_facts、required_fact_ids、固定 contract、rubric 与 error taxonomy 评分；不得推断 prompt 版本、数据 split、生成产品或任何实验结论。对 required facts 返回 fact_id、met/not_met/indeterminate、输出证据和简短理由；对 unsupported claims 返回具体 output evidence、supporting_fact_ids 与理由。证据不足时返回 indeterminate，不猜测。",
-      "content_hash": "ddb1668f15aed2d1f4e2924ac4d57f0259a95970fac5394ed8ed932c731c81c9",
+      "content": "你是独立、盲化、pointwise 的 AI Grader。每次只评价当前 anonymous candidate；只依据固定 Task Pack contract、source_material、source_facts/fact_id、required_fact_ids、raw model response、rubric 和 error taxonomy。不得展示、猜测或输出 Prompt Version、v1/v2、Dev/Holdout、生成产品或模型、run purpose、candidate 顺序、previous result、calculated_status、Human Review 或实验结论。输出必须是 trim 后可直接由标准 JSON parser 解析的一个 JSON object；禁止 Markdown、code fence、前置说明、后置说明或额外 root 字段。root 必须且只能包含 language_compliance、required_facts、unsupported_claims、readability、primary_error_type、secondary_error_types、grader_reason。language_compliance 和 readability 必须是恰好包含 label、reason、evidence 的 object，label 只能是 pass、fail、indeterminate，reason 和 evidence 均为非空字符串。required_facts 必须是数组，并且对每个 required_fact_id 恰好出现一次；每项必须且只能包含 fact_id、label、output_evidence、reason，label 只能是 met、not_met、indeterminate；met 时 output_evidence 必须非空，not_met 或 indeterminate 时 output_evidence 可以为空字符串，reason 始终非空。unsupported_claims 必须是数组；每项必须且只能包含 claim、output_evidence、supporting_fact_ids、reason，四者均有明确结构，supporting_fact_ids 只能引用当前 source_facts 中存在的 fact_id（不局限于 required_fact_ids）；没有 unsupported claim 时必须返回 []。primary_error_type 必须是字符串或 null；secondary_error_types 必须是字符串数组；grader_reason 必须是非空字符串。语义证据不足或 source/annotation 存在真实歧义时返回 indeterminate，不猜测。示例结构：{\"language_compliance\":{\"label\":\"pass\",\"reason\":\"主体自然语言为简体中文。\",\"evidence\":\"title、summary、key_points 均为中文。\"},\"required_facts\":[{\"fact_id\":\"F01\",\"label\":\"met\",\"output_evidence\":\"输出中的语义证据。\",\"reason\":\"准确表达了该事实。\"}],\"unsupported_claims\":[],\"readability\":{\"label\":\"pass\",\"reason\":\"结构清晰。\",\"evidence\":\"字段内容可读。\"},\"primary_error_type\":null,\"secondary_error_types\":[],\"grader_reason\":\"已按 rubric 完成独立评价。\"}。",
+      "content_hash": "78d67282f3a8a9fccc4b725148de2fb60d751880f00e572115f13b46995f2cf5",
       "status": "draft",
       "owner_approved_at": null
     },
     {
       "asset_type": "rubric_v1",
       "version_label": "v1",
-      "content": "Required facts：每个 required_fact_id 只要在输出中被准确语义表达即可判 met；同义改写允许。Closed-world groundedness：任何可判断真假的事实性命题均须获得 source_material 的直接支持；外部知识、未支持的因果、比较、程度与评价性事实判断均为 unsupported。Language compliance：字段值主体自然语言须为简体中文，必要品牌、型号、缩写、数字或单位可保留。Readability 与 primary_error_type 仅用于诊断，不直接决定 pass/fail。",
-      "content_hash": "2fc85d6dbd51d146af1f9ad5e23b023de7db52249826ca802be7f8083724fa10",
+      "content": "Required facts：每个 required_fact_id 只要在输出中准确表达对应事实语义即可判 met；允许同义改写、句式变化和不新增事实的合并表达，不要求逐字匹配。Closed-world groundedness：source_material 是唯一事实来源；任何可判断真假的事实性命题都必须得到 source_material 的直接支持。纯表达性的连接语、组织语言和不新增事实的自然改写不是事实性命题。source_facts 只是可回溯的原子事实索引，source_material 中明确存在但 source_facts 漏标是 annotation issue，不应直接判 unsupported。source 未表达某事实不等于 source 表达了该事实的否定；只有 source 明确的否定、禁止或不支持表述才能支持相应 negative claim。外部背景知识、未经支持的因果关系、比较关系、程度或性能主张、评价性事实判断、实体/日期/数字/属性的推断均为 unsupported。真实语义歧义、source 表述不足或 annotation 冲突返回 indeterminate。Language compliance：自然语言主体须为简体中文，必要品牌名、型号、缩写、数字和单位可保留。readability、非关键表达偏好和 primary_error_type 仅用于诊断，不直接决定 pass/fail。",
+      "content_hash": "719cbba979f3657f5c164d947a03b02b77b8818c487259b8c850f68dd577b8eb",
       "status": "draft",
       "owner_approved_at": null
     },
     {
       "asset_type": "error_taxonomy_v1",
       "version_label": "v1",
-      "content": "required_fact_missing：必需事实未被准确语义表达。unsupported_claim：输出包含 source_material 无直接支持的可判断真假的事实性命题。language_noncompliance：字段值主体并非简体中文。readability_issue：表达明显影响可读性。ambiguous_evidence：source、输出或 annotation 的语义不足以可靠判定。other：其余需要说明的诊断问题。",
-      "content_hash": "c7064049a6b9f87df3e26d6fd018549ccedfe9ea3c4f86795133d8fe4bc33670",
+      "content": "六类错误：unsupported_claim（source_material 不直接支持的事实性命题）；required_fact_missing（required_fact_id 未被准确表达）；language_noncompliance（主体自然语言不满足简体中文要求）；ambiguous_evidence（source、output 或 annotation 证据不足或存在冲突）；readability_issue（表达明显影响可读性）；other（其他需说明的诊断问题）。无错误时 primary_error_type 必须为 null、secondary_error_types 必须为 []。primary_error_type 固定优先级为 unsupported_claim > required_fact_missing > language_noncompliance > ambiguous_evidence > readability_issue > other；secondary_error_types 不得包含 primary_error_type，且只记录其他已成立的诊断。该 taxonomy 只规范语义诊断，不替代 deterministic schema、字段数量、长度或其他硬规则检查。",
+      "content_hash": "95fa5f21c634f447f36d08fc18763fc29c433057f6b97671415c83ad30bf2502",
       "status": "draft",
       "owner_approved_at": null
     }
