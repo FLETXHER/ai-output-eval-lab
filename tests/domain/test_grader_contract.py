@@ -199,6 +199,35 @@ def test_taxonomy_rejects_arbitrary_duplicate_or_primary_secondary_values() -> N
     assert any("must not contain primary_error_type" in error for error in errors)
 
 
+def test_taxonomy_allows_standalone_other_as_primary_with_documented_reason() -> None:
+    payload = valid_payload()
+    payload["primary_error_type"] = "other"
+    payload["grader_reason"] = "输出存在不属于前五类的已记录诊断。"
+
+    assert validate_grader_payload(payload, ["F01", "F02"]) == []
+
+
+def test_taxonomy_allows_other_as_secondary_when_another_issue_is_primary() -> None:
+    payload = valid_payload()
+    payload["readability"]["label"] = "fail"  # type: ignore[index]
+    payload["primary_error_type"] = "readability_issue"
+    payload["secondary_error_types"] = ["other"]
+    payload["grader_reason"] = "存在可读性问题及一项不属于前五类的已记录诊断。"
+
+    assert validate_grader_payload(payload, ["F01", "F02"]) == []
+
+
+def test_taxonomy_rejects_other_as_primary_when_required_secondary_set_is_missing() -> None:
+    payload = valid_payload()
+    payload["readability"]["label"] = "fail"  # type: ignore[index]
+    payload["primary_error_type"] = "other"
+    payload["secondary_error_types"] = []
+
+    errors = validate_grader_payload(payload, ["F01", "F02"])
+    assert any("primary_error_type must be 'readability_issue'" in error for error in errors)
+    assert any("every other detected diagnostic" in error for error in errors)
+
+
 def test_language_hard_criterion_requires_complete_evidence() -> None:
     payload = valid_payload()
     payload["language_compliance"] = {

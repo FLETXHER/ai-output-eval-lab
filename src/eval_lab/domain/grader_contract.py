@@ -289,6 +289,15 @@ def _validate_error_taxonomy(payload: Mapping[str, object], errors: list[str]) -
 
 def _detected_error_types(payload: Mapping[str, object]) -> set[str]:
     detected: set[str] = set()
+    # ``other`` has no separate structured field. Its declaration in either
+    # taxonomy field is the deterministic evidence that this diagnostic exists;
+    # the required non-empty grader_reason carries its explanation.
+    if payload.get("primary_error_type") == "other":
+        detected.add("other")
+    declared_secondary = payload.get("secondary_error_types")
+    if isinstance(declared_secondary, list) and "other" in declared_secondary:
+        detected.add("other")
+
     unsupported_claims = payload.get("unsupported_claims")
     if isinstance(unsupported_claims, list) and unsupported_claims:
         detected.add("unsupported_claim")

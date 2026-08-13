@@ -88,6 +88,10 @@ def test_draft_assets_capture_the_full_blind_grader_contract_and_methodology(
     assert "unsupported_claim > required_fact_missing" in taxonomy
     assert "secondary_error_types 不得包含 primary_error_type" in taxonomy
     assert "不替代 deterministic schema" in taxonomy
+    assert "other" in grader_prompt and "已记录且不属于前五类" in grader_prompt
+    assert "grader_reason 必须具体说明该诊断及其证据和理由" in grader_prompt
+    assert "other" in taxonomy and "已记录且不属于前五类" in taxonomy
+    assert "grader_reason" in taxonomy and "证据和诊断理由" in taxonomy
 
 
 @pytest.mark.parametrize(
