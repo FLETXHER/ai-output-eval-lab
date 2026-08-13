@@ -1,1 +1,471 @@
-[]
+[
+  {
+    "case_key": "brief-dev-01",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "晨屿折叠台灯 A7 提供暖光与白光两种色温，并设有三档亮度。整灯重380克，包装内含一根USB-C充电线和一张说明卡。充满电后可连续使用8小时。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "暖光与白光两种色温"},
+      {"fact_id": "F02", "text": "三档亮度"},
+      {"fact_id": "F03", "text": "整灯重380克"},
+      {"fact_id": "F04", "text": "一根USB-C充电线和一张说明卡"},
+      {"fact_id": "F05", "text": "连续使用8小时"}
+    ],
+    "required_fact_ids": ["F03", "F04", "F05"],
+    "explicit_forbidden_claims": ["不得声称支持无线充电"],
+    "task_notes": "请生成一份结构化短内容，必须包含重量、包装内容和连续使用时长。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "a974877e8b339d4f93dc5e1425ad5de132f1ad904a08277e676e9cd39a6e0380",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-02",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "云栖随行水壶 M2 容量为620毫升，瓶身采用食品级不锈钢。它配有硅胶提环，杯盖内侧设有可拆洗的滤网。官方说明仅提到冷饮使用场景。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "容量为620毫升"},
+      {"fact_id": "F02", "text": "食品级不锈钢"},
+      {"fact_id": "F03", "text": "硅胶提环"},
+      {"fact_id": "F04", "text": "可拆洗的滤网"},
+      {"fact_id": "F05", "text": "冷饮使用场景"}
+    ],
+    "required_fact_ids": ["F01", "F03", "F04"],
+    "explicit_forbidden_claims": ["不得声称可以保温24小时"],
+    "task_notes": "请生成一份结构化短内容，必须说明容量、提环和可拆洗滤网。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "ccaeaa1c7acfcb45ad2d7ef7a9eaefcf7220f9528785de15bb9c8e1b934834f5",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-03",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "北岸桌面收纳盒 N3 共有四个独立分格，外部尺寸为长24厘米、宽16厘米、高9厘米。盒体由再生塑料制成，底部带有四个防滑脚垫。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "四个独立分格"},
+      {"fact_id": "F02", "text": "长24厘米、宽16厘米、高9厘米"},
+      {"fact_id": "F03", "text": "再生塑料制成"},
+      {"fact_id": "F04", "text": "四个防滑脚垫"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F04"],
+    "explicit_forbidden_claims": ["不得声称可上墙安装"],
+    "task_notes": "请生成一份结构化短内容，必须包含分格数量、外部尺寸和防滑脚垫。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "d73233acbf19975d92d09b2724ccd296fa7940577c2abe2dc7b59a4254d70c92",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-04",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "星桥蓝牙音箱 S1 使用蓝牙5.3连接，单次充电可播放10小时。机身只有一个实体按键，包装内附一根USB-C充电线。产品说明没有列出防水等级。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "蓝牙5.3连接"},
+      {"fact_id": "F02", "text": "播放10小时"},
+      {"fact_id": "F03", "text": "一个实体按键"},
+      {"fact_id": "F04", "text": "一根USB-C充电线"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F03"],
+    "explicit_forbidden_claims": ["不得声称具备防水等级"],
+    "task_notes": "请生成一份结构化短内容，必须说明连接版本、播放时长和实体按键数量。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "72b1ee2b3432aec162d14f98696c4637a32ce77c6062ddac5fd79f55b69583fa",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-05",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "松露燕麦脆 O5 每袋净含量为180克，由燕麦片、南瓜籽和冻干苹果块制成。包装标注建议开封后七天内食用完毕，并明确写有不含花生原料。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "净含量为180克"},
+      {"fact_id": "F02", "text": "燕麦片、南瓜籽和冻干苹果块"},
+      {"fact_id": "F03", "text": "开封后七天内食用完毕"},
+      {"fact_id": "F04", "text": "不含花生原料"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F03"],
+    "explicit_forbidden_claims": ["不得声称适合所有过敏人群"],
+    "task_notes": "请生成一份结构化短内容，必须说明净含量、主要原料和开封后食用建议。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "98b5d6a444fc00e2f7035ed3a72ee01e5e963feef914bd9ecdd0565acfdb7e0c",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-06",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "青岚旅行收纳袋 Q6 展开后有三个网布夹层，折叠后尺寸为18厘米乘12厘米。主袋采用涤纶面料，随袋附带两个可替换标签卡。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "三个网布夹层"},
+      {"fact_id": "F02", "text": "18厘米乘12厘米"},
+      {"fact_id": "F03", "text": "涤纶面料"},
+      {"fact_id": "F04", "text": "两个可替换标签卡"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F04"],
+    "explicit_forbidden_claims": ["不得声称为真空压缩袋"],
+    "task_notes": "请生成一份结构化短内容，必须包含夹层数量、折叠后尺寸和标签卡数量。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "8881706412b7f0cbd8cccf28ac9ba772a83122af9e7a17c54b4c698f809399d0",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-07",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "远帆电动螺丝刀 R8 配有12枚批头，额定扭矩为3牛米。手柄内置一盏前置照明灯，充电接口为USB-C。包装未包含收纳箱。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "12枚批头"},
+      {"fact_id": "F02", "text": "额定扭矩为3牛米"},
+      {"fact_id": "F03", "text": "前置照明灯"},
+      {"fact_id": "F04", "text": "充电接口为USB-C"},
+      {"fact_id": "F05", "text": "未包含收纳箱"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F04"],
+    "explicit_forbidden_claims": ["不得声称包装附送收纳箱"],
+    "task_notes": "请生成一份结构化短内容，必须说明批头数量、额定扭矩和充电接口。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "ca7af2b02c88bdc5e260ab0b576fe6af75c648ca34b9cda284565f170c0eb34f",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-08",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "柏舟便携风扇 B4 有两档风速，满电状态下低档可使用6小时。扇叶直径为9厘米，底座可向后折叠至120度。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "两档风速"},
+      {"fact_id": "F02", "text": "低档可使用6小时"},
+      {"fact_id": "F03", "text": "扇叶直径为9厘米"},
+      {"fact_id": "F04", "text": "折叠至120度"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F04"],
+    "explicit_forbidden_claims": ["不得声称支持遥控操作"],
+    "task_notes": "请生成一份结构化短内容，必须说明风速档位、低档使用时长和底座折叠角度。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "112a06ae31f504659a6d203ed1656ac5817a3ecb3dfe21ddc8ba0af93a125fff",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-09",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "雾谷香薰蜡片 W1 每盒含6片，每片重15克。气味由雪松、白茶和柑橘组成，建议放入衣柜或抽屉使用。单盒内没有挂绳。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "每盒含6片"},
+      {"fact_id": "F02", "text": "每片重15克"},
+      {"fact_id": "F03", "text": "雪松、白茶和柑橘"},
+      {"fact_id": "F04", "text": "衣柜或抽屉使用"},
+      {"fact_id": "F05", "text": "没有挂绳"}
+    ],
+    "required_fact_ids": ["F01", "F03", "F04"],
+    "explicit_forbidden_claims": ["不得声称附带挂绳"],
+    "task_notes": "请生成一份结构化短内容，必须包含每盒数量、气味组成和建议使用位置。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "90008ddc594fb70eb2a144c3a9c29820bb35389aaf934ca7cd4091c2cdd31647",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-10",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "岩枝保温午餐袋 Y2 容量为8升，内部有一层可拆卸的铝膜内胆。提手长度为24厘米，随袋附一块可重复使用的冰袋。产品未声明可机洗。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "容量为8升"},
+      {"fact_id": "F02", "text": "可拆卸的铝膜内胆"},
+      {"fact_id": "F03", "text": "提手长度为24厘米"},
+      {"fact_id": "F04", "text": "可重复使用的冰袋"},
+      {"fact_id": "F05", "text": "未声明可机洗"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F04"],
+    "explicit_forbidden_claims": ["不得声称可以机洗"],
+    "task_notes": "请生成一份结构化短内容，必须说明容量、可拆卸内胆和随袋冰袋。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "84ed30ffb93b21ea94456235988acba67d08e99c2047e1dc2673d09d19237fb1",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-11",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "湖光磁吸便签板 H6 尺寸为30厘米乘20厘米，正面为白色书写面。背面有8颗磁铁，包装内含一支黑色水性笔和一块擦拭布。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "30厘米乘20厘米"},
+      {"fact_id": "F02", "text": "白色书写面"},
+      {"fact_id": "F03", "text": "8颗磁铁"},
+      {"fact_id": "F04", "text": "一支黑色水性笔和一块擦拭布"}
+    ],
+    "required_fact_ids": ["F01", "F03", "F04"],
+    "explicit_forbidden_claims": ["不得声称附带彩色笔"],
+    "task_notes": "请生成一份结构化短内容，必须包含尺寸、磁铁数量和包装内物品。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "ce3b817aa9c6273e85e966c42e27fbcce56b448d6fb45c2dc6646553fe8f5592",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-12",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "暖石颈枕 K9 使用记忆棉填充，枕套为可拆卸的针织布套。颈枕重270克，收纳时可装入随附的束口袋。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "记忆棉填充"},
+      {"fact_id": "F02", "text": "可拆卸的针织布套"},
+      {"fact_id": "F03", "text": "颈枕重270克"},
+      {"fact_id": "F04", "text": "随附的束口袋"}
+    ],
+    "required_fact_ids": ["F01", "F03", "F04"],
+    "explicit_forbidden_claims": ["不得声称具备按摩功能"],
+    "task_notes": "请生成一份结构化短内容，必须说明填充材料、重量和随附束口袋。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "f685c2077e09f7860309aefea8690b7267f8a57b8ca225c8e18a7f6e03a24004",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-13",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "映川阅读夹灯 I3 采用夹式固定，夹口最大开合为4厘米。灯头可上下调节90度，提供三档色温。充电线长度为80厘米。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "夹口最大开合为4厘米"},
+      {"fact_id": "F02", "text": "上下调节90度"},
+      {"fact_id": "F03", "text": "三档色温"},
+      {"fact_id": "F04", "text": "充电线长度为80厘米"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F03"],
+    "explicit_forbidden_claims": ["不得声称配有遥控器"],
+    "task_notes": "请生成一份结构化短内容，必须包含夹口开合尺寸、调节角度和色温档位。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "96b7ba8ba512a9ae8aed23b39559f1433c46ef484bd329652c6ca5f6b400b677",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-14",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "竹野洗漱包 Z4 有一个主袋和两个侧袋，展开长度为42厘米。内侧设置可拆卸小镜，挂钩采用金属材质。包装不含洗漱用品。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "一个主袋和两个侧袋"},
+      {"fact_id": "F02", "text": "展开长度为42厘米"},
+      {"fact_id": "F03", "text": "可拆卸小镜"},
+      {"fact_id": "F04", "text": "挂钩采用金属材质"},
+      {"fact_id": "F05", "text": "不含洗漱用品"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F03"],
+    "explicit_forbidden_claims": ["不得声称包装含洗漱用品"],
+    "task_notes": "请生成一份结构化短内容，必须说明袋体分区、展开长度和可拆卸小镜。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "f0d7b1cac077e3f0bee8d2dbd9b88861d01a76bffff86cc7ce86c16923175f07",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-15",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "原野宠物饮水碗 P7 容量为900毫升，碗口直径为16厘米。碗体使用陶瓷制作，底部配有一圈硅胶防滑垫。建议手洗。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "容量为900毫升"},
+      {"fact_id": "F02", "text": "碗口直径为16厘米"},
+      {"fact_id": "F03", "text": "陶瓷制作"},
+      {"fact_id": "F04", "text": "一圈硅胶防滑垫"},
+      {"fact_id": "F05", "text": "建议手洗"}
+    ],
+    "required_fact_ids": ["F01", "F03", "F04"],
+    "explicit_forbidden_claims": ["不得声称可用于微波炉"],
+    "task_notes": "请生成一份结构化短内容，必须包含容量、碗体材料和防滑垫。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "0eab74e12eb7f3b20150d942a50de83eee73a8ab42cc8e3ff9e1b381552904e6",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-16",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "朔风桌面加湿器 U2 水箱容量为280毫升，喷雾模式有连续和间歇两种。机身高度为14厘米，包装内附两根替换棉芯。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "水箱容量为280毫升"},
+      {"fact_id": "F02", "text": "连续和间歇两种"},
+      {"fact_id": "F03", "text": "机身高度为14厘米"},
+      {"fact_id": "F04", "text": "两根替换棉芯"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F04"],
+    "explicit_forbidden_claims": ["不得声称带有香薰功能"],
+    "task_notes": "请生成一份结构化短内容，必须说明水箱容量、喷雾模式和替换棉芯数量。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "7656e83982e19cdde28a27ce64cacec7a177c5a02bb5345636c56b26c8c30740",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-17",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "鹿鸣咖啡滤杯 L1 适配1至2杯冲煮量，滤杯内壁有20条导流槽。它使用陶瓷材质，底座直径为10厘米。包装内没有滤纸。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "适配1至2杯冲煮量"},
+      {"fact_id": "F02", "text": "20条导流槽"},
+      {"fact_id": "F03", "text": "陶瓷材质"},
+      {"fact_id": "F04", "text": "底座直径为10厘米"},
+      {"fact_id": "F05", "text": "没有滤纸"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F03"],
+    "explicit_forbidden_claims": ["不得声称包装附有滤纸"],
+    "task_notes": "请生成一份结构化短内容，必须说明冲煮量、导流槽数量和滤杯材质。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "faca768d4a0b78e53f851a9d21d32c6e773c4c06422ec6461dce59d3047f5092",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-dev-18",
+    "revision": 1,
+    "split": "dev",
+    "source_material": "海盐露营餐具套 T5 包含一把叉子、一把勺子和一把折叠刀。收纳袋长度为21厘米，餐具采用304不锈钢。折叠刀未标注可用于儿童。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "一把叉子、一把勺子和一把折叠刀"},
+      {"fact_id": "F02", "text": "收纳袋长度为21厘米"},
+      {"fact_id": "F03", "text": "304不锈钢"},
+      {"fact_id": "F04", "text": "未标注可用于儿童"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F03"],
+    "explicit_forbidden_claims": ["不得声称适合儿童独立使用"],
+    "task_notes": "请生成一份结构化短内容，必须包含餐具组成、收纳袋长度和餐具材料。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "311be2abc7bab9665248b239de17816f9082e36fe54711d136a03093efe03789",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-holdout-01",
+    "revision": 1,
+    "split": "holdout",
+    "source_material": "霁月折叠雨伞 J8 展开直径为98厘米，收起后长度为28厘米。伞布为聚酯纤维，伞柄上配有手绳。产品说明未提供防晒指数。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "展开直径为98厘米"},
+      {"fact_id": "F02", "text": "收起后长度为28厘米"},
+      {"fact_id": "F03", "text": "聚酯纤维"},
+      {"fact_id": "F04", "text": "配有手绳"},
+      {"fact_id": "F05", "text": "未提供防晒指数"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F04"],
+    "explicit_forbidden_claims": ["不得声称具有UPF防晒等级"],
+    "task_notes": "请生成一份结构化短内容，必须说明展开直径、收起长度和伞柄手绳。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "4e410d6a973daf99126707bf5d5bb358017e169ce04136bc4a94b2596b56250e",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-holdout-02",
+    "revision": 1,
+    "split": "holdout",
+    "source_material": "岚声白噪音机 A2 内置雨声、海浪和风声三种声音，定时选项为30分钟、60分钟和90分钟。机身重210克，使用两节AA电池供电。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "雨声、海浪和风声三种声音"},
+      {"fact_id": "F02", "text": "30分钟、60分钟和90分钟"},
+      {"fact_id": "F03", "text": "机身重210克"},
+      {"fact_id": "F04", "text": "两节AA电池供电"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F04"],
+    "explicit_forbidden_claims": ["不得声称支持蓝牙播放"],
+    "task_notes": "请生成一份结构化短内容，必须包含声音种类、定时选项和供电方式。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "f339bb50dc4e4903bd662f68fe8f4af39a546418af30abdf7d235c3c1835af31",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-holdout-03",
+    "revision": 1,
+    "split": "holdout",
+    "source_material": "叙园种植套装 X3 含有3个纸质育苗杯、6颗罗勒种子和1包培养土。说明卡建议每天喷雾一次，并把育苗杯放在有散射光的位置。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "3个纸质育苗杯"},
+      {"fact_id": "F02", "text": "6颗罗勒种子"},
+      {"fact_id": "F03", "text": "1包培养土"},
+      {"fact_id": "F04", "text": "每天喷雾一次"},
+      {"fact_id": "F05", "text": "有散射光的位置"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F04"],
+    "explicit_forbidden_claims": ["不得声称保证发芽"],
+    "task_notes": "请生成一份结构化短内容，必须说明育苗杯数量、种子数量和每日喷雾建议。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "924bc69eef64dc515c1e122165c8c3b3f4fa13acaba90c742f8df3634d847d65",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-holdout-04",
+    "revision": 1,
+    "split": "holdout",
+    "source_material": "逐星行李牌 G6 使用硅胶材质，卡片窗口尺寸为7厘米乘4厘米。背面有隐私翻盖，挂带长度为18厘米。每包有2个同色行李牌。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "硅胶材质"},
+      {"fact_id": "F02", "text": "7厘米乘4厘米"},
+      {"fact_id": "F03", "text": "隐私翻盖"},
+      {"fact_id": "F04", "text": "挂带长度为18厘米"},
+      {"fact_id": "F05", "text": "2个同色行李牌"}
+    ],
+    "required_fact_ids": ["F02", "F03", "F05"],
+    "explicit_forbidden_claims": ["不得声称配有电子定位功能"],
+    "task_notes": "请生成一份结构化短内容，必须包含卡片窗口尺寸、隐私翻盖和每包数量。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "051dc1f5e505f0cd50aa6a450de45835065acf3924634658c34b0089e4f33161",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-holdout-05",
+    "revision": 1,
+    "split": "holdout",
+    "source_material": "轻舟午睡毯 C4 展开尺寸为150厘米乘100厘米，面料为摇粒绒。毯子重420克，可卷入附带的束带中收纳。清洗标签建议冷水手洗。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "150厘米乘100厘米"},
+      {"fact_id": "F02", "text": "摇粒绒"},
+      {"fact_id": "F03", "text": "重420克"},
+      {"fact_id": "F04", "text": "附带的束带"},
+      {"fact_id": "F05", "text": "冷水手洗"}
+    ],
+    "required_fact_ids": ["F01", "F03", "F04"],
+    "explicit_forbidden_claims": ["不得声称可烘干"],
+    "task_notes": "请生成一份结构化短内容，必须说明展开尺寸、重量和附带束带。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "1e47813154739974ddf1c8deeb0e47e71c795dcd5947c96a6c2d8b8f3148346c",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  },
+  {
+    "case_key": "brief-holdout-06",
+    "revision": 1,
+    "split": "holdout",
+    "source_material": "石岸工具盒 E5 有两层托盘和16个可调节隔板，外部尺寸为长32厘米、宽18厘米、高15厘米。盒扣采用金属材质，包装内不含工具。",
+    "source_facts": [
+      {"fact_id": "F01", "text": "两层托盘"},
+      {"fact_id": "F02", "text": "16个可调节隔板"},
+      {"fact_id": "F03", "text": "长32厘米、宽18厘米、高15厘米"},
+      {"fact_id": "F04", "text": "盒扣采用金属材质"},
+      {"fact_id": "F05", "text": "不含工具"}
+    ],
+    "required_fact_ids": ["F01", "F02", "F03"],
+    "explicit_forbidden_claims": ["不得声称包装内含工具"],
+    "task_notes": "请生成一份结构化短内容，必须包含托盘层数、隔板数量和外部尺寸。",
+    "feasibility_qa_status": "pending",
+    "content_hash": "ef587951d8056649d4871cc253190af9cc41e5388c8ad54b7cc8a46f4adc5e1b",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "traceability_metadata": {"source_of_truth": "source_material", "source_facts_traceable": true}
+  }
+]

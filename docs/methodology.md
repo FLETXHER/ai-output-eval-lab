@@ -3,9 +3,11 @@
 AI Output Eval Lab evaluates one fixed task: Grounded Structured Brief
 Generation. The checked-in `db/seed_data/task_pack.json` records the fixed
 Simplified-Chinese JSON contract and its reproducible hash. At this engineering
-stage, `db/seed_data/test_cases.json` is intentionally an empty, non-final
-collection. It is not the formal 24-case dataset and must not be presented as
-one.
+stage, `db/seed_data/test_cases.json` contains a 24-Case draft (18 Dev and 6
+Holdout Cases). Every Case remains `feasibility_qa_status: pending`: the file
+is not the formal dataset and must not be presented as owner-approved or ready
+for an experiment. Owner review of every Case is required before any status can
+be changed to `pass` or any formal Case-set hash/date is recorded.
 
 ## Case annotations and source precedence
 

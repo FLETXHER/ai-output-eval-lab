@@ -43,13 +43,17 @@ def test_checked_in_seed_files_are_valid_but_explicitly_non_final(repo_root: Pat
     cases = load_test_case_seed(repo_root / "db" / "seed_data" / "test_cases.json")
 
     assert task_pack["ok"] is True
-    assert cases == {"ok": True, "value": [], "errors": [], "raw_text": None}
+    assert cases["ok"] is True
+    assert len(cases["value"]) == 24
 
     result = qa_case_set(cases["value"], task_pack["value"])
 
-    assert result["total_cases"] == 0
+    assert result["total_cases"] == 24
+    assert result["dev_cases"] == 18
+    assert result["holdout_cases"] == 6
     assert result["formal_ready"] is False
-    assert any("exactly 24" in error for error in result["errors"])
+    assert all(case["feasibility_qa_status"] == "pending" for case in cases["value"])
+    assert sum("feasibility_qa_status must be 'pass'" in error for error in result["errors"]) == 24
 
 
 def test_formal_ready_requires_valid_18_dev_6_holdout_set_and_shared_contract() -> None:
