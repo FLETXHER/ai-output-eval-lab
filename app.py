@@ -36,7 +36,7 @@ def _open_database() -> object:
 def main() -> None:
     conn = _open_database()
     st.title("AI Output Eval Lab")
-    st.caption("Prompt evaluation workbench")
+    st.caption("Prompt 输出评测工作台")
 
     def overview_page() -> None:
         render_overview(conn)
@@ -61,13 +61,13 @@ def main() -> None:
 
     navigation = st.navigation(
         [
-            st.Page(overview_page, title="Overview"),
-            st.Page(task_packs_page, title="Task Packs"),
-            st.Page(test_cases_page, title="Test Cases"),
-            st.Page(prompt_versions_page, title="Prompt Versions"),
-            st.Page(model_outputs_page, title="Model Outputs"),
-            st.Page(evaluation_page, title="Evaluation"),
-            st.Page(analysis_page, title="Analysis"),
+            st.Page(overview_page, title="概览"),
+            st.Page(task_packs_page, title="任务包"),
+            st.Page(test_cases_page, title="测试用例"),
+            st.Page(prompt_versions_page, title="Prompt 版本"),
+            st.Page(model_outputs_page, title="模型输出"),
+            st.Page(evaluation_page, title="评测"),
+            st.Page(analysis_page, title="分析"),
         ]
     )
     navigation.run()

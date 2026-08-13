@@ -20,7 +20,7 @@ from eval_lab.ui.components import show_validation_errors
 
 
 def render(conn: sqlite3.Connection) -> None:
-    st.title("Model Outputs")
+    st.title("模型输出")
     context = _select_open_run_and_case(conn)
     if context is None:
         return
@@ -29,9 +29,9 @@ def render(conn: sqlite3.Connection) -> None:
         return
     output = get_model_output_slot(conn, run_id, case_id)
     if output is not None and output["raw_response"] is not None:
-        st.info("The first actual response is saved as immutable evidence.")
-        st.caption(f"Generation packet version: {output['generation_packet_version']}")
-        st.caption(f"Generation packet hash: {output['generation_packet_hash']}")
+        st.info("第一条实际回答已作为不可变证据保存。")
+        st.caption(f"生成任务包版本：{output['generation_packet_version']}")
+        st.caption(f"生成任务包哈希：{output['generation_packet_hash']}")
         st.code(str(output["raw_response"]), language="text")
         return
     try:
@@ -40,10 +40,10 @@ def render(conn: sqlite3.Connection) -> None:
         show_validation_errors([str(error)])
         return
 
-    st.subheader("Copy-ready generation packet")
+    st.subheader("可直接复制的生成任务包")
     st.code(str(packet["text"]), language="text")
-    st.caption(f"Generation packet version: {packet['packet_version']}")
-    st.caption(f"Generation packet hash: {packet['content_hash']}")
+    st.caption(f"生成任务包版本：{packet['packet_version']}")
+    st.caption(f"生成任务包哈希：{packet['content_hash']}")
 
     _render_actual_response_form(conn, run_id, case_id, packet)
     _render_technical_retry_form(conn, run_id, case_id, packet, output)
@@ -57,11 +57,11 @@ def _render_generator_condition_control(conn: sqlite3.Connection, run_id: int) -
     if output_count or run["generator_visible_model"] != "not_visible":
         return True
 
-    st.subheader("Confirm generator condition before capture")
-    st.caption("Before the first response is captured, confirm not_visible or record the exact model name shown in the generator UI.")
+    st.subheader("正式采集前确认生成模型条件")
+    st.caption("记录第一条回答前，请确认 not_visible，或填写生成产品界面显示的准确模型名称。")
     with st.form("record_generator_visible_model"):
-        visible_model = st.text_input("Visible model (leave as not_visible only when no model name is shown)", value="not_visible")
-        submitted = st.form_submit_button("Confirm generator condition")
+        visible_model = st.text_input("可见模型（只有界面未显示模型名称时才保留 not_visible）", value="not_visible")
+        submitted = st.form_submit_button("确认生成模型条件")
     if not submitted:
         return False
     try:
@@ -69,24 +69,24 @@ def _render_generator_condition_control(conn: sqlite3.Connection, run_id: int) -
     except (WorkflowError, LookupError, ValueError) as error:
         show_validation_errors([str(error)])
         return False
-    st.success(f"Generator condition recorded: {recorded}")
+    st.success(f"已记录生成模型条件：{recorded}")
     return True
 
 
 def _select_open_run_and_case(conn: sqlite3.Connection) -> tuple[int, int] | None:
     runs = list_open_evaluation_runs(conn)
     if not runs:
-        st.info("No open Evaluation Run is available for model-output capture.")
+        st.info("没有可用于采集模型输出的开放评测运行。")
         return None
     run_by_id = {int(run["id"]): run for run in runs}
-    run_id = st.selectbox("Evaluation Run", list(run_by_id), format_func=lambda value: f"Run {value}")
+    run_id = st.selectbox("评测运行", list(run_by_id), format_func=lambda value: f"Run {value}")
     cases = list_test_cases_for_split(conn, str(run_by_id[run_id]["split"]))
     if not cases:
-        st.info("The selected run has no Cases in its split.")
+        st.info("当前运行的切分中没有测试用例。")
         return None
     case_by_id = {int(case["id"]): case for case in cases}
     case_id = st.selectbox(
-        "Test Case",
+        "测试用例",
         list(case_by_id),
         format_func=lambda value: f"{case_by_id[value]['case_key']} r{case_by_id[value]['revision']}",
     )
@@ -96,12 +96,12 @@ def _select_open_run_and_case(conn: sqlite3.Connection) -> tuple[int, int] | Non
 def _render_actual_response_form(
     conn: sqlite3.Connection, run_id: int, case_id: int, packet: dict[str, object]
 ) -> None:
-    st.subheader("Record first actual response")
-    st.caption("If no actual response was generated, leave this form and record a technical retry below.")
+    st.subheader("记录第一条实际回答")
+    st.caption("如果没有生成实际回答，请不要提交空回答，改用下面的技术故障重试记录。")
     with st.form("record_actual_model_response"):
-        raw_response = st.text_area("Raw model response", height=180)
-        generated_at = st.text_input("Generated at (UTC ISO 8601)", value=_utc_now())
-        submitted = st.form_submit_button("Record actual response")
+        raw_response = st.text_area("模型原始回答", height=180)
+        generated_at = st.text_input("生成时间（UTC ISO 8601）", value=_utc_now())
+        submitted = st.form_submit_button("保存实际回答")
     if not submitted:
         return
     try:
@@ -124,7 +124,7 @@ def _render_actual_response_form(
     except (WorkflowError, LookupError, ValueError) as error:
         show_validation_errors([str(error)])
     else:
-        st.success("Saved the raw response and deterministic Rule Checks.")
+        st.success("已保存模型原始回答，并完成确定性规则检查。")
 
 
 def _render_technical_retry_form(
@@ -135,11 +135,11 @@ def _render_technical_retry_form(
     output: sqlite3.Row | None,
 ) -> None:
     retry_count = int(output["technical_retry_count"]) if output is not None else 0
-    st.subheader("Record technical retry")
-    st.caption(f"Technical retry count: {retry_count}. This is not an output-quality judgment.")
+    st.subheader("记录技术故障重试")
+    st.caption(f"技术故障重试次数：{retry_count}。这不属于输出质量判定。")
     with st.form("record_technical_retry"):
-        reason = st.text_area("Technical retry reason")
-        submitted = st.form_submit_button("Record technical retry")
+        reason = st.text_area("技术故障重试原因")
+        submitted = st.form_submit_button("保存技术故障重试")
     if not submitted:
         return
     try:
@@ -156,7 +156,7 @@ def _render_technical_retry_form(
     except (WorkflowError, LookupError, ValueError) as error:
         show_validation_errors([str(error)])
     else:
-        st.success("Saved the technical retry separately from model-output quality.")
+        st.success("已单独保存技术故障重试记录，不计入模型输出质量。")
 
 
 def _utc_now() -> str:

@@ -25,9 +25,9 @@ from eval_lab.ui.components import show_validation_errors
 
 
 def render(conn: sqlite3.Connection) -> None:
-    st.title("Evaluation")
-    mode = st.radio("Evaluation mode", ["Blind Grader Import", "Blind Human Review"])
-    if mode == "Blind Grader Import":
+    st.title("评测")
+    mode = st.radio("评测模式", ["盲化 Grader 导入", "盲化人工复核"])
+    if mode == "盲化 Grader 导入":
         _render_blind_grader_import(conn)
     else:
         _render_blind_human_review(conn)
@@ -37,26 +37,26 @@ def _render_blind_grader_import(conn: sqlite3.Connection) -> None:
     outputs = list_captured_model_outputs(conn)
     condition_ids = list_grader_condition_ids(conn)
     if not outputs or not condition_ids:
-        st.info("A captured response and a Grader Condition are required before import.")
+        st.info("导入前需要先有已采集的回答和 Grader 条件。")
         return
     output_by_id = {int(row["id"]): row for row in outputs}
     output_id = st.selectbox(
-        "Anonymous candidate", list(output_by_id),
+        "匿名候选", list(output_by_id),
         format_func=lambda value: str(output_by_id[value]["candidate_id"]),
     )
-    condition_id = st.selectbox("Grader Condition", condition_ids, format_func=lambda value: f"Condition {value}")
+    condition_id = st.selectbox("Grader 条件", condition_ids, format_func=lambda value: f"条件 {value}")
     try:
         packet = build_blind_grader_packet_for_output(conn, output_id, condition_id)
     except (LookupError, ValueError) as error:
         show_validation_errors([str(error)])
         return
-    st.subheader("Copy-ready blind Grader packet")
+    st.subheader("可直接复制的盲化 Grader 任务包")
     st.code(str(packet["text"]), language="text")
-    st.caption(f"Blind Grader packet version: {packet['packet_version']}")
-    st.caption(f"Blind Grader packet hash: {packet['content_hash']}")
+    st.caption(f"盲化 Grader 任务包版本：{packet['packet_version']}")
+    st.caption(f"盲化 Grader 任务包哈希：{packet['content_hash']}")
     with st.form("import_blind_grader_result"):
-        raw_json = st.text_area("Returned Grader JSON", height=220)
-        submitted = st.form_submit_button("Import Grader JSON")
+        raw_json = st.text_area("Grader 返回的 JSON", height=220)
+        submitted = st.form_submit_button("导入 Grader JSON")
     if not submitted:
         return
     try:
@@ -68,17 +68,17 @@ def _render_blind_grader_import(conn: sqlite3.Connection) -> None:
     except (WorkflowError, LookupError, ValueError, TypeError) as error:
         show_validation_errors([str(error)])
     else:
-        st.success("Imported the blind Grader result and calculated automatic status.")
+        st.success("已导入盲化 Grader 结果，并计算自动状态。")
 
 
 def _render_blind_human_review(conn: sqlite3.Connection) -> None:
     rows = list_unreviewed_evaluation_results(conn)
     if not rows:
-        st.info("No unreviewed automatic Evaluation Result is available.")
+        st.info("暂无待人工复核的自动评测结果。")
         return
     by_id = {int(row["id"]): row for row in rows}
     result_id = st.selectbox(
-        "Anonymous candidate for independent review",
+        "待独立复核的匿名候选",
         list(by_id),
         format_func=lambda value: str(by_id[value]["candidate_id"]),
     )
@@ -89,13 +89,21 @@ def _render_blind_human_review(conn: sqlite3.Connection) -> None:
         return
 
     # This branch intentionally does not fetch or render automatic outcomes before submission.
-    st.subheader("Copy-ready blind Human Review packet")
+    st.subheader("可直接复制的盲化人工复核任务包")
     st.code(str(packet["text"]), language="text")
     with st.form("submit_blind_human_review"):
-        final_decision = st.selectbox("Independent final decision", ["pass", "fail", "indeterminate"])
-        evidence = st.text_area("Independent review evidence")
-        reason = st.text_area("Independent review reason")
-        submitted = st.form_submit_button("Submit independent review")
+        final_decision = st.selectbox(
+            "人工最终裁决",
+            ["pass", "fail", "indeterminate"],
+            format_func={
+                "pass": "通过（pass）",
+                "fail": "失败（fail）",
+                "indeterminate": "无法确定（indeterminate）",
+            }.get,
+        )
+        evidence = st.text_area("人工复核证据")
+        reason = st.text_area("人工复核原因")
+        submitted = st.form_submit_button("提交人工复核")
     if not submitted:
         return
     try:
@@ -111,7 +119,7 @@ def _render_blind_human_review(conn: sqlite3.Connection) -> None:
     except (WorkflowError, LookupError, ValueError) as error:
         show_validation_errors([str(error)])
         return
-    st.success("Saved independent Human Review without changing automatic evaluation.")
+    st.success("已保存独立人工复核，不会修改自动评测结果。")
     _render_post_submission_comparison(conn, result_id)
 
 
@@ -119,6 +127,6 @@ def _render_post_submission_comparison(conn: sqlite3.Connection, evaluation_resu
     row = get_decision_layer_comparison(conn, evaluation_result_id)
     if row is None:
         return
-    st.markdown("### Post-submission decision layers")
-    st.caption(f"calculated_status: {row['calculated_status']}")
-    st.caption(f"final_decision: {row['final_decision']}")
+    st.markdown("### 提交后的判定层")
+    st.caption(f"calculated_status（自动计算）：{row['calculated_status']}")
+    st.caption(f"final_decision（人工最终裁决）：{row['final_decision']}")

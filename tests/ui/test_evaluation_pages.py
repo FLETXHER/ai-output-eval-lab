@@ -148,12 +148,14 @@ def test_model_output_page_preserves_invalid_response_runs_rules_and_separates_p
     ids = _seed(temporary_db_path, repo_root)
     page = _page_test("pages.model_outputs", str(temporary_db_path), str(repo_root))
     assert not page.exception
+    assert page.title[0].value == "模型输出"
+    assert page.subheader[0].value == "可直接复制的生成任务包"
     packet_text = page.code[0].value
     assert "UI_SOURCE_ONLY" in packet_text
     for forbidden in ("F01", "required_fact_ids", "v1", "UI_CASE_SET_HASH", "UI_GENERATOR_PRODUCT"):
         assert forbidden not in packet_text
-    assert any("Generation packet version" in item.value for item in page.caption)
-    assert any("Generation packet hash" in item.value for item in page.caption)
+    assert any("生成任务包版本" in item.value for item in page.caption)
+    assert any("生成任务包哈希" in item.value for item in page.caption)
 
     page.text_area[0].set_value(RAW_INVALID_JSON)
     page.text_input[0].set_value(NOW)
@@ -213,7 +215,7 @@ def test_evaluation_page_blind_grader_packet_hides_experiment_metadata(temporary
     for forbidden in ("v1", "UI_CASE_SET_HASH", "UI_GENERATOR_PRODUCT", "UI_GENERATOR_MODEL", "calculated_status", "human_review", "previous"):
         assert forbidden not in packet_text
     assert "candidate-" in packet_text
-    assert any("Blind Grader packet hash" in item.value for item in page.caption)
+    assert any("盲化 Grader 任务包哈希" in item.value for item in page.caption)
     assert "api" not in "\n".join(item.value for item in page.markdown).lower()
     assert output_id > 0
 
@@ -284,7 +286,7 @@ def test_blind_human_review_hides_automatic_evidence_until_submission_then_shows
     ids = _seed(temporary_db_path, repo_root)
     result_id = _store_indeterminate_result(temporary_db_path, repo_root, ids)
     page = _page_test("pages.evaluation", str(temporary_db_path), str(repo_root))
-    page.radio[0].set_value("Blind Human Review").run()
+    page.radio[0].set_value("盲化人工复核").run()
     assert not page.exception
     pre_submit = page.code[0].value
     for expected in ("candidate-", "UI_SOURCE_ONLY", "UI_TASK_INSTRUCTIONS", "Human Review Rubric", "Decision Options"):
@@ -297,8 +299,8 @@ def test_blind_human_review_hides_automatic_evidence_until_submission_then_shows
     page.button[0].click().run()
     assert not page.exception
     rendered = "\n".join(item.value for item in [*page.markdown, *page.caption])
-    assert "calculated_status: indeterminate" in rendered
-    assert "final_decision: pass" in rendered
+    assert "calculated_status（自动计算）：indeterminate" in rendered
+    assert "final_decision（人工最终裁决）：pass" in rendered
     conn = connect(temporary_db_path)
     assert conn.execute("SELECT calculated_status FROM evaluation_results WHERE id = ?", (result_id,)).fetchone()[0] == "indeterminate"
     assert conn.execute("SELECT final_decision FROM human_reviews WHERE evaluation_result_id = ?", (result_id,)).fetchone()[0] == "pass"
@@ -314,7 +316,7 @@ def test_analysis_page_separates_status_layers_and_read_only(temporary_db_path, 
     page = _page_test("pages.analysis", str(temporary_db_path), str(repo_root))
     assert not page.exception
     rendered = "\n".join(item.value for item in [*page.markdown, *page.caption])
-    for label in ("calculated_status", "final_decision", "Human Review coverage", "determinate", "indeterminate rate"):
+    for label in ("calculated_status", "final_decision", "人工复核覆盖率", "determinate", "indeterminate 比例"):
         assert label in rendered
     conn = connect(temporary_db_path)
     assert "\n".join(conn.iterdump()) == before

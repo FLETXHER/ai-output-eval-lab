@@ -17,19 +17,19 @@ from eval_lab.ui.components import show_validation_errors, status_badge
 
 
 def render(conn: sqlite3.Connection) -> None:
-    st.title("Prompt Versions")
+    st.title("Prompt 版本")
     _render_create_form(conn)
     st.divider()
     _render_existing_versions(conn)
 
 
 def _render_create_form(conn: sqlite3.Connection) -> None:
-    st.subheader("Create Prompt Version")
+    st.subheader("创建 Prompt 版本")
     with st.form("create_prompt_version"):
-        version_label = st.text_input("Version label")
-        prompt_text = st.text_area("Prompt text")
-        change_reason = st.text_area("Change reason")
-        submitted = st.form_submit_button("Create Prompt Version")
+        version_label = st.text_input("版本标识")
+        prompt_text = st.text_area("Prompt 文本")
+        change_reason = st.text_area("变更原因")
+        submitted = st.form_submit_button("创建 Prompt 版本")
     if not submitted:
         return
     try:
@@ -37,14 +37,14 @@ def _render_create_form(conn: sqlite3.Connection) -> None:
     except WorkflowError as error:
         show_validation_errors([str(error)])
     else:
-        st.success(f"Created Prompt {version_label}.")
-        st.caption(f"Prompt record ID: {prompt_id}")
+        st.success(f"已创建 Prompt {version_label}。")
+        st.caption(f"Prompt 记录 ID：{prompt_id}")
 
 
 def _render_existing_versions(conn: sqlite3.Connection) -> None:
     prompts = list_prompt_versions(conn)
     if not prompts:
-        st.info("No Prompt Versions yet.")
+        st.info("暂无 Prompt 版本。")
         return
 
     table = pd.DataFrame(
@@ -62,30 +62,30 @@ def _render_existing_versions(conn: sqlite3.Connection) -> None:
     )
     st.dataframe(table, hide_index=True)
     prompt_by_label = {str(prompt["version_label"]): prompt for prompt in prompts}
-    selected_label = st.selectbox("Select Prompt Version", list(prompt_by_label))
+    selected_label = st.selectbox("选择 Prompt 版本", list(prompt_by_label))
     selected = prompt_by_label[selected_label]
     st.code(str(selected["prompt_text"]), language=None)
     status_badge(str(selected["status"]))
     if selected["status"] == "draft":
         if selected["owner_approved_at"] is None:
-            if st.button("Record owner approval"):
+            if st.button("记录 Owner 审核通过"):
                 try:
                     approve_prompt_version(conn, int(selected["id"]), _utc_now())
                 except WorkflowError as error:
                     show_validation_errors([str(error)])
                 else:
-                    st.success(f"Recorded owner approval for Prompt {selected['version_label']}.")
-            st.info("Owner approval must be recorded before this Prompt can be frozen.")
+                    st.success(f"已记录 Prompt {selected['version_label']} 的 Owner 审核。")
+            st.info("冻结 Prompt 前必须先记录 Owner 审核。")
             return
-        if st.button("Freeze selected Prompt"):
+        if st.button("冻结当前 Prompt"):
             try:
                 freeze_prompt_version(conn, int(selected["id"]), _utc_now())
             except WorkflowError as error:
                 show_validation_errors([str(error)])
             else:
-                st.success(f"Frozen Prompt {selected['version_label']}.")
+                st.success(f"已冻结 Prompt {selected['version_label']}。")
     else:
-        st.info("Frozen Prompt text is immutable. Create a new draft for any change.")
+        st.info("已冻结的 Prompt 文本不可修改；如需变更，请创建新的草稿版本。")
 
 
 def _utc_now() -> str:

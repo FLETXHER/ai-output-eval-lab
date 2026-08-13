@@ -10,21 +10,25 @@ from eval_lab.repositories.sqlite import list_task_packs, list_test_cases
 
 
 def render(conn: sqlite3.Connection) -> None:
-    st.title("Test Cases")
+    st.title("测试用例")
     packs = list_task_packs(conn)
     if not packs:
-        st.info("Create the fixed Task Pack record before adding or viewing Cases.")
+        st.info("请先创建固定任务包记录，再添加或查看测试用例。")
         return
 
     pack_names = {int(pack["id"]): str(pack["pack_key"]) for pack in packs}
     selected_pack_id = st.selectbox(
-        "Task Pack", list(pack_names), format_func=lambda pack_id: pack_names[pack_id]
+        "任务包", list(pack_names), format_func=lambda pack_id: pack_names[pack_id]
     )
-    split = st.selectbox("Split", ["all", "dev", "holdout"])
+    split = st.selectbox(
+        "数据集切分",
+        ["all", "dev", "holdout"],
+        format_func={"all": "全部", "dev": "Dev", "holdout": "Holdout"}.get,
+    )
     selected_split = None if split == "all" else split
     cases = list_test_cases(conn, selected_pack_id, selected_split)
     if not cases:
-        st.info("No matching Test Cases.")
+        st.info("没有匹配的测试用例。")
         return
 
     table_rows = []

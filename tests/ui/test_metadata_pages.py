@@ -87,17 +87,17 @@ def test_overview_and_task_pack_show_counts_and_fixed_contract(temporary_db_path
     overview = _page_test("pages.overview", str(temporary_db_path), str(repo_root))
     assert not overview.exception
     assert [(metric.label, metric.value) for metric in overview.metric] == [
-        ("Task Packs", "1"),
-        ("Test Cases", "2"),
-        ("Prompt Versions", "0"),
+        ("任务包", "1"),
+        ("测试用例", "2"),
+        ("Prompt 版本", "0"),
     ]
 
     packs = _page_test("pages.task_pack", str(temporary_db_path), str(repo_root))
     assert not packs.exception
-    assert packs.title[0].value == "Task Packs"
+    assert packs.title[0].value == "任务包"
     assert packs.dataframe[0].value.iloc[0]["pack_key"] == TASK_PACK_CONTRACT["pack_key"]
     assert any("4–20" in item.value for item in packs.markdown)
-    assert any("feasibility QA" in item.value for item in packs.markdown)
+    assert any("数据集 QA" in item.value for item in packs.markdown)
 
 
 def test_task_pack_empty_state_still_shows_fixed_contract_and_qa(temporary_db_path, repo_root) -> None:
@@ -108,9 +108,9 @@ def test_task_pack_empty_state_still_shows_fixed_contract_and_qa(temporary_db_pa
     packs = _page_test("pages.task_pack", str(temporary_db_path), str(repo_root))
 
     assert not packs.exception
-    assert packs.info[0].value == "No Task Pack has been initialized yet."
+    assert packs.info[0].value == "尚未初始化任务包。"
     assert any("4–20" in item.value for item in packs.markdown)
-    assert any("feasibility QA" in item.value for item in packs.markdown)
+    assert any("数据集 QA" in item.value for item in packs.markdown)
 
 
 def test_test_case_split_filter_and_prompt_lifecycle_in_ui(temporary_db_path, repo_root) -> None:
@@ -129,7 +129,7 @@ def test_test_case_split_filter_and_prompt_lifecycle_in_ui(temporary_db_path, re
     prompts.text_area[1].set_value("baseline")
     prompts.button[0].click().run()
     assert not prompts.exception
-    assert prompts.success[0].value == "Created Prompt v1."
+    assert prompts.success[0].value == "已创建 Prompt v1。"
 
     conn = connect(temporary_db_path)
     row = conn.execute("SELECT id, prompt_text, status FROM prompt_versions WHERE version_label = 'v1'").fetchone()
@@ -139,7 +139,7 @@ def test_test_case_split_filter_and_prompt_lifecycle_in_ui(temporary_db_path, re
     prompts = _page_test("pages.prompt_versions", str(temporary_db_path), str(repo_root))
     prompts.selectbox[0].select("v1")
     prompts.button[1].click().run()
-    assert prompts.success[0].value == "Recorded owner approval for Prompt v1."
+    assert prompts.success[0].value == "已记录 Prompt v1 的 Owner 审核。"
 
     prompts = _page_test("pages.prompt_versions", str(temporary_db_path), str(repo_root))
     prompts.selectbox[0].select("v1")
