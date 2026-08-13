@@ -22,6 +22,15 @@ _PAIR_CONDITION_KEYS = (
     "environment_notes",
     "protocol_version",
 )
+_RUN_SCOPED_QUERY_NAMES = frozenset({
+    "run_summary",
+    "status_distribution",
+    "rule_failures",
+    "required_fact_failures",
+    "unsupported_claims",
+    "error_types",
+    "bad_cases",
+})
 
 
 def _queries() -> dict[str, str]:
@@ -48,9 +57,72 @@ def run_query(
     query = load_query(query_name)
     if _READ_ONLY_TOKENS.search(query):
         raise ValueError(f"analysis query {query_name!r} is not read-only")
+    _guard_query_grader_conditions(conn, query_name, params)
     cursor = conn.execute(query, tuple(params))
     columns = [column[0] for column in cursor.description]
     return pd.DataFrame.from_records([tuple(row) for row in cursor.fetchall()], columns=columns)
+
+
+def _grader_condition_ids_for_runs(
+    conn: sqlite3.Connection, run_ids: Sequence[object]
+) -> set[int]:
+    unique_run_ids = tuple(dict.fromkeys(run_ids))
+    if not unique_run_ids:
+        return set()
+    placeholders = ", ".join("?" for _ in unique_run_ids)
+    rows = conn.execute(
+        f"""
+        SELECT DISTINCT grader_condition_id
+        FROM grader_results AS gr
+        JOIN model_outputs AS mo ON mo.id = gr.model_output_id
+        WHERE mo.evaluation_run_id IN ({placeholders})
+        UNION
+        SELECT DISTINCT grader_condition_id
+        FROM evaluation_results AS ev
+        JOIN model_outputs AS mo ON mo.id = ev.model_output_id
+        WHERE mo.evaluation_run_id IN ({placeholders})
+        """,
+        unique_run_ids * 2,
+    )
+    return {int(row[0]) for row in rows}
+
+
+def _assert_single_grader_condition_for_runs(
+    conn: sqlite3.Connection, run_ids: Sequence[object]
+) -> set[int]:
+    condition_ids = _grader_condition_ids_for_runs(conn, run_ids)
+    if len(condition_ids) > 1:
+        raise ValueError("analysis cannot merge multiple grader conditions")
+    return condition_ids
+
+
+def _run_ids_for_comparison_group(
+    conn: sqlite3.Connection, comparison_group_id: object
+) -> tuple[int, ...]:
+    rows = conn.execute(
+        "SELECT id FROM evaluation_runs WHERE comparison_group_id = ? ORDER BY id",
+        (comparison_group_id,),
+    )
+    return tuple(int(row[0]) for row in rows)
+
+
+def _guard_query_grader_conditions(
+    conn: sqlite3.Connection, query_name: str, params: Sequence[object]
+) -> None:
+    if query_name in _RUN_SCOPED_QUERY_NAMES:
+        if not params:
+            raise ValueError(f"analysis query {query_name!r} requires a run id")
+        _assert_single_grader_condition_for_runs(conn, (params[0],))
+    elif query_name == "paired_comparison":
+        if len(params) < 2:
+            raise ValueError("paired_comparison requires two run ids")
+        _assert_single_grader_condition_for_runs(conn, (params[0], params[1]))
+    elif query_name == "review_coverage":
+        if not params:
+            raise ValueError("review_coverage requires a comparison group id")
+        _assert_single_grader_condition_for_runs(
+            conn, _run_ids_for_comparison_group(conn, params[0])
+        )
 
 
 def run_summary(conn: sqlite3.Connection, run_id: int) -> pd.DataFrame:
@@ -98,6 +170,10 @@ def _comparison_label(left: object, right: object) -> str:
 def paired_comparison(conn: sqlite3.Connection, comparison_group_id: str) -> pd.DataFrame:
     """Compare the two fully matched runs without collapsing decision layers."""
     left, right = _comparable_runs(conn, comparison_group_id)
+    left_conditions = _grader_condition_ids_for_runs(conn, (left["id"],))
+    right_conditions = _grader_condition_ids_for_runs(conn, (right["id"],))
+    if len(left_conditions) != 1 or len(right_conditions) != 1 or left_conditions != right_conditions:
+        raise ValueError("paired comparison requires one shared grader condition")
     table = run_query(conn, "paired_comparison", (left["id"], right["id"], left["id"], right["id"]))
     table.insert(1, "left_prompt_version", left["version_label"])
     table.insert(2, "right_prompt_version", right["version_label"])

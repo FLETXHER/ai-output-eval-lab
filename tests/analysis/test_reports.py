@@ -92,10 +92,10 @@ def _run(conn: sqlite3.Connection, prompt_id: int) -> int:
     })
 
 
-def _condition(conn: sqlite3.Connection) -> int:
+def _condition(conn: sqlite3.Connection, *, suffix: str = "one") -> int:
     return insert_grader_condition(conn, {
-        "grader_product": "Gemini", "grader_visible_model": "not_visible", "grader_prompt": "grade",
-        "grader_prompt_hash": "grader-hash", "grader_prompt_version_label": "v1", "rubric": "rubric",
+        "grader_product": "Gemini", "grader_visible_model": "not_visible", "grader_prompt": f"grade-{suffix}",
+        "grader_prompt_hash": f"grader-{suffix}-hash", "grader_prompt_version_label": "v1", "rubric": "rubric",
         "rubric_hash": "rubric-hash", "rubric_version_label": "v1", "error_taxonomy": "taxonomy",
         "error_taxonomy_hash": "taxonomy-hash", "error_taxonomy_version_label": "v1",
         "owner_approved_at": NOW, "created_at": NOW,
@@ -237,3 +237,29 @@ def test_paired_comparison_rejects_mismatched_conditions_and_run_query_is_read_o
     table = run_query(initialized_connection, "bad_cases", (analysis_data["run_v1"],))
     assert table.to_dict("records") == [{"model_output_id": 2, "candidate_id": "candidate-a1b2c4", "calculated_status": "indeterminate", "final_decision": "indeterminate", "primary_error_type": "ambiguous_source"}]
     assert _database_state(initialized_connection) == before
+
+
+def test_analysis_rejects_mixed_grader_conditions_instead_of_merging_rows(
+    initialized_connection: sqlite3.Connection, analysis_data: dict[str, int]
+) -> None:
+    conn = initialized_connection
+    second_condition = _condition(conn, suffix="two")
+    first_output_id = conn.execute(
+        "SELECT id FROM model_outputs WHERE evaluation_run_id = ? ORDER BY id LIMIT 1",
+        (analysis_data["run_v1"],),
+    ).fetchone()[0]
+    _evaluation(conn, first_output_id, second_condition, "pass")
+    before = _database_state(conn)
+
+    for report in (
+        lambda: run_summary(conn, analysis_data["run_v1"]),
+        lambda: status_distribution(conn, analysis_data["run_v1"]),
+        lambda: failure_breakdown(conn, analysis_data["run_v1"]),
+        lambda: run_query(conn, "bad_cases", (analysis_data["run_v1"],)),
+        lambda: review_coverage(conn, "DEV-COMP-01"),
+        lambda: paired_comparison(conn, "DEV-COMP-01"),
+    ):
+        with pytest.raises(ValueError, match="grader condition"):
+            report()
+
+    assert _database_state(conn) == before
