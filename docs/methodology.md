@@ -59,21 +59,24 @@ assessed by the closed-world AI Grader.
 `db/seed_data/experiment_assets_v1.json` contains four reproducible snapshots:
 Prompt v1, Grader Prompt v1, Rubric v1, and Error Taxonomy v1. Each snapshot
 has its exact content, SHA-256 content hash, version label, status, and owner
-approval timestamp. The checked-in file is intentionally a Codex-assisted
-**draft**: every asset remains `status: "draft"` with
-`owner_approved_at: null`. It is not a formal experiment asset and cannot be
-registered, frozen, or used for a formal run.
+approval timestamp. The owner formally approved the four snapshots on
+`2026-08-13T13:29:27Z`; each checked-in entry is therefore
+`status: "approved"` with that timestamp. The approved hashes are Prompt v1
+`07aa48853dbe0ed54ff88a2476ce6ec9be2cac4d2680dc2b41d0fc36c392ae4f`, Grader
+Prompt v1 `c14dfcfde0d5902e2b42bdee399bb12d4eb81c62f546bee65cec9f215eb810b1`,
+Rubric v1 `719cbba979f3657f5c164d947a03b02b77b8818c487259b8c850f68dd577b8eb`,
+and Error Taxonomy v1
+`ea8324fe5e865c1bb5bba755925b1fca452c90a49070d15dcfad32865a5d6338`.
+Changing any snapshot content requires a new owner-approval gate.
 
 Only an owner-reviewed manifest whose four v1 assets have matching hashes and
-explicit approval timestamps can register one frozen Prompt v1 and one Grader
-Condition in SQLite. Prompt v1 or v2 cannot freeze without owner approval. A
-Grader Condition without owner approval may support a non-formal demo workflow,
-but cannot render a blind grading packet for an output from a frozen formal
-Prompt. Prompt v2 may be drafted only after a closed Dev Prompt v1 run has
-stored evaluation results and a non-empty evidence-based change reason; it is
-still a draft until separately owner-approved and frozen.
+explicit approval timestamps can register one frozen Prompt v1 and one
+owner-approved Grader Condition in SQLite. Prompt v1 or v2 cannot freeze
+without owner approval. Prompt v2 may be drafted only after a closed Dev
+Prompt v1 run has stored evaluation results and a non-empty evidence-based
+change reason; it is still a draft until separately owner-approved and frozen.
 
-The drafted Grader Prompt v1 records the strict pointwise JSON result contract:
+The owner-approved Grader Prompt v1 records the strict pointwise JSON result contract:
 the root contains exactly the seven semantic fields, required facts appear
 exactly once, `met` requires non-empty output evidence while `not_met` and
 `indeterminate` may use an empty evidence string, and `readability.label` is

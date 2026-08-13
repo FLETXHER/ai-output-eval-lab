@@ -1,0 +1,146 @@
+{
+  "generation_packet_version": "generation-1.0",
+  "manifest_version": "1.0",
+  "packets": [
+    {
+      "candidate_id": "candidate-d6b5915c46057bcb",
+      "case_key": "brief-dev-01",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-01.txt",
+      "packet_hash": "d9080942bc70c5144eb2591fdc446990fe3b66f101b5d26ddea167e4ef2e6a68",
+      "test_case_id": 1
+    },
+    {
+      "candidate_id": "candidate-673aeeb08cfbb00b",
+      "case_key": "brief-dev-02",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-02.txt",
+      "packet_hash": "918a83767d853623e9836b6964af7bca272f1688e2cdfafd172a63ad49fd6a1a",
+      "test_case_id": 2
+    },
+    {
+      "candidate_id": "candidate-85f2ef987b76f4c3",
+      "case_key": "brief-dev-03",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-03.txt",
+      "packet_hash": "f8236c2aa7bcb4b6c05bcacae33134a149f2c452902f45003e238ac4991eae18",
+      "test_case_id": 3
+    },
+    {
+      "candidate_id": "candidate-492ab00bbe71db09",
+      "case_key": "brief-dev-04",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-04.txt",
+      "packet_hash": "2113e0757d5f9d1ebab1a10b52a7e2381cb6f81b1187552b4ee3de9997379ff0",
+      "test_case_id": 4
+    },
+    {
+      "candidate_id": "candidate-6669b8482999dfdc",
+      "case_key": "brief-dev-05",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-05.txt",
+      "packet_hash": "9859b4e75954ea098d6fe9b728605e16237d544c41094e60fa4da7a9de593af7",
+      "test_case_id": 5
+    },
+    {
+      "candidate_id": "candidate-62325dfc1fc67525",
+      "case_key": "brief-dev-06",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-06.txt",
+      "packet_hash": "b1e639c31dc890e7a2f464a1e623caf224d022387e43ab164d7b93c7b787c7b8",
+      "test_case_id": 6
+    },
+    {
+      "candidate_id": "candidate-3d5f0fd838606f1f",
+      "case_key": "brief-dev-07",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-07.txt",
+      "packet_hash": "46c5d64209d080712e3da74e8e2e4d88ea6685aa129ae1257c264a000e31011a",
+      "test_case_id": 7
+    },
+    {
+      "candidate_id": "candidate-546201ca810396be",
+      "case_key": "brief-dev-08",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-08.txt",
+      "packet_hash": "ad10995dea2e1c434fce5a0407fb6f4e11d31f8f2571a0a0167f0dd8791ed797",
+      "test_case_id": 8
+    },
+    {
+      "candidate_id": "candidate-b8eb241b0bdd8d69",
+      "case_key": "brief-dev-09",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-09.txt",
+      "packet_hash": "8ec19a0afa8eb7c4da65e526f8f2149d77a7d1c667bb795230624b0b0187f7bc",
+      "test_case_id": 9
+    },
+    {
+      "candidate_id": "candidate-b37ae13e618cd2a9",
+      "case_key": "brief-dev-10",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-10.txt",
+      "packet_hash": "7e8a3cb49e561f4d871d9fc4c5403e072a5ae567bc57a12272119fc8c1bbb1ec",
+      "test_case_id": 10
+    },
+    {
+      "candidate_id": "candidate-3f4ffd26df275e6f",
+      "case_key": "brief-dev-11",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-11.txt",
+      "packet_hash": "9296d6f9ece3ca20d21c7798a6b77e92922f6991d3c83e5b18cb5f70c7d803c2",
+      "test_case_id": 11
+    },
+    {
+      "candidate_id": "candidate-ce356d2f943ea5af",
+      "case_key": "brief-dev-12",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-12.txt",
+      "packet_hash": "2335172c10366cd873107a2447003a67de96b9a9d6ba86913bba8dd81baa08a0",
+      "test_case_id": 12
+    },
+    {
+      "candidate_id": "candidate-fd18287e99e3834d",
+      "case_key": "brief-dev-13",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-13.txt",
+      "packet_hash": "289128efbf0a869dd57bf6d90e2b5eb0228899758a7a310eb95f93eca84640f8",
+      "test_case_id": 13
+    },
+    {
+      "candidate_id": "candidate-ed0120f61c409c58",
+      "case_key": "brief-dev-14",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-14.txt",
+      "packet_hash": "23ee9ca8ce59ef7388bcc88b0650a77d1ba26046e7bbb06c56c04e612c688af4",
+      "test_case_id": 14
+    },
+    {
+      "candidate_id": "candidate-dcf02bc950c3bfe7",
+      "case_key": "brief-dev-15",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-15.txt",
+      "packet_hash": "8bd351b1180d8a9b6ac5c3466a440a17dfdddafbb2c6a3c826a379a84e0c2e29",
+      "test_case_id": 15
+    },
+    {
+      "candidate_id": "candidate-a8aa5f5b8b00b993",
+      "case_key": "brief-dev-16",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-16.txt",
+      "packet_hash": "295b70e93f46543be79a5479dd9e91b0924fde981c1363100e43be676fc8d475",
+      "test_case_id": 16
+    },
+    {
+      "candidate_id": "candidate-5c70ee556e54dab3",
+      "case_key": "brief-dev-17",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-17.txt",
+      "packet_hash": "f8ff0ad82ea8fcc46d6094f6393f93242df40b5f621670a02e717241ba049820",
+      "test_case_id": 17
+    },
+    {
+      "candidate_id": "candidate-d9301910b58fb501",
+      "case_key": "brief-dev-18",
+      "packet_file": "docs/run_sheets/dev_v1_packets/brief-dev-18.txt",
+      "packet_hash": "0f104de28473ddce40b7202efaa6f2401a079459ebc832c1fbce084748326316",
+      "test_case_id": 18
+    }
+  ],
+  "run": {
+    "case_set_hash": "a23f8d88ad1e35443d3b31bfcd0c60274b204cdbd0738d4ab21eefd24db3cb1c",
+    "comparison_group_id": "DEV-COMP-01",
+    "contract_hash": "ae273822b78d16cba4df5d784d611313f788353229d1b95166047cc1254a2c59",
+    "created_at": "2026-08-13T13:39:44.763253Z",
+    "environment_notes": "Fresh clean conversation per Case; first actual response only; no follow-up correction; complete the paired condition in the same short execution window; technical retries only for a technical failure.",
+    "generator_product": "ChatGPT web UI (manual)",
+    "generator_visible_model": "not_visible",
+    "grader_condition_id": 1,
+    "prompt_version_id": 1,
+    "protocol_version": "manual-generation-v1",
+    "run_id": 1,
+    "split": "dev"
+  }
+}

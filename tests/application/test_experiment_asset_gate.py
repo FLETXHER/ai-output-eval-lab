@@ -14,7 +14,7 @@ from eval_lab.imports.test_cases import load_experiment_assets, validate_experim
 from eval_lab.repositories.sqlite import connect, initialize_database
 
 
-NOW = "2026-08-13T00:00:00Z"
+NOW = "2026-08-13T13:29:27Z"
 
 
 @pytest.fixture
@@ -34,21 +34,18 @@ def draft_assets(repo_root: Path) -> dict[str, object]:
     )
 
 
-def _approved(payload: dict[str, object]) -> dict[str, object]:
-    approved = deepcopy(payload)
-    assets = approved["assets"]
+def _unapproved(payload: dict[str, object]) -> dict[str, object]:
+    unapproved = deepcopy(payload)
+    assets = unapproved["assets"]
     assert isinstance(assets, list)
     for asset in assets:
         assert isinstance(asset, dict)
-        asset["status"] = "approved"
-        asset["owner_approved_at"] = NOW
-        content = asset["content"]
-        assert isinstance(content, str)
-        asset["content_hash"] = hashlib.sha256(content.encode("utf-8")).hexdigest()
-    return approved
+        asset["status"] = "draft"
+        asset["owner_approved_at"] = None
+    return unapproved
 
 
-def test_checked_in_assets_are_reproducible_drafts_not_formal(draft_assets) -> None:
+def test_checked_in_assets_are_reproducible_owner_approved_formal_assets(draft_assets) -> None:
     loaded = load_experiment_assets(
         Path(__file__).resolve().parents[2]
         / "db"
@@ -56,12 +53,9 @@ def test_checked_in_assets_are_reproducible_drafts_not_formal(draft_assets) -> N
         / "experiment_assets_v1.json"
     )
     assert loaded["ok"] is True
-    assert validate_experiment_assets(draft_assets) == [
-        "asset 'prompt_v1' must be owner-approved before formal registration",
-        "asset 'grader_prompt_v1' must be owner-approved before formal registration",
-        "asset 'rubric_v1' must be owner-approved before formal registration",
-        "asset 'error_taxonomy_v1' must be owner-approved before formal registration",
-    ]
+    assert validate_experiment_assets(draft_assets) == []
+    assert {asset["status"] for asset in draft_assets["assets"]} == {"approved"}
+    assert {asset["owner_approved_at"] for asset in draft_assets["assets"]} == {NOW}
 
 
 def test_draft_assets_capture_the_full_blind_grader_contract_and_methodology(
@@ -143,12 +137,13 @@ def test_asset_validation_rejects_incomplete_or_non_v1_manifest(
 def test_only_owner_approved_v1_assets_can_register_formal_snapshots(
     conn: sqlite3.Connection, draft_assets: dict[str, object]
 ) -> None:
+    unapproved_assets = _unapproved(draft_assets)
     with pytest.raises(WorkflowError, match="owner-approved"):
-        register_approved_experiment_assets(conn, draft_assets)
+        register_approved_experiment_assets(conn, unapproved_assets)
     assert conn.execute("SELECT COUNT(*) FROM prompt_versions").fetchone()[0] == 0
     assert conn.execute("SELECT COUNT(*) FROM grader_conditions").fetchone()[0] == 0
 
-    registered = register_approved_experiment_assets(conn, _approved(draft_assets))
+    registered = register_approved_experiment_assets(conn, draft_assets)
     assert set(registered) == {"prompt_version_id", "grader_condition_id"}
     prompt = conn.execute(
         "SELECT * FROM prompt_versions WHERE id = ?", (registered["prompt_version_id"],)
@@ -161,7 +156,7 @@ def test_only_owner_approved_v1_assets_can_register_formal_snapshots(
     assert prompt["owner_approved_at"] == NOW
     assert condition["owner_approved_at"] == NOW
 
-    by_type = {asset["asset_type"]: asset for asset in _approved(draft_assets)["assets"]}
+    by_type = {asset["asset_type"]: asset for asset in draft_assets["assets"]}
     assert prompt["prompt_text"] == by_type["prompt_v1"]["content"]
     assert prompt["content_hash"] == by_type["prompt_v1"]["content_hash"]
     assert condition["grader_prompt"] == by_type["grader_prompt_v1"]["content"]
@@ -170,3 +165,17 @@ def test_only_owner_approved_v1_assets_can_register_formal_snapshots(
     assert condition["rubric_hash"] == by_type["rubric_v1"]["content_hash"]
     assert condition["error_taxonomy"] == by_type["error_taxonomy_v1"]["content"]
     assert condition["error_taxonomy_hash"] == by_type["error_taxonomy_v1"]["content_hash"]
+
+    # Asset approval establishes formal provenance only. It must not fabricate
+    # any experiment evidence or create a Prompt v2 before the owner-supervised
+    # Dev baseline has actually run.
+    assert conn.execute(
+        "SELECT COUNT(*) FROM prompt_versions WHERE version_label = 'v2'"
+    ).fetchone()[0] == 0
+    for table_name in (
+        "model_outputs",
+        "grader_results",
+        "evaluation_results",
+        "human_reviews",
+    ):
+        assert conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0] == 0
