@@ -48,6 +48,17 @@ def initialize_database(conn: sqlite3.Connection, schema_path: str | Path) -> No
 
 @contextmanager
 def transaction(conn: sqlite3.Connection) -> ContextManager[sqlite3.Connection]:
+    if conn.in_transaction:
+        conn.execute("SAVEPOINT eval_lab_nested_transaction")
+        try:
+            yield conn
+        except BaseException:
+            conn.execute("ROLLBACK TO SAVEPOINT eval_lab_nested_transaction")
+            conn.execute("RELEASE SAVEPOINT eval_lab_nested_transaction")
+            raise
+        else:
+            conn.execute("RELEASE SAVEPOINT eval_lab_nested_transaction")
+        return
     conn.execute("BEGIN")
     try:
         yield conn

@@ -11,6 +11,7 @@ from eval_lab.domain.packets import (
     render_blind_human_review_packet,
     render_generation_packet,
 )
+from eval_lab.repositories.sqlite import transaction
 
 
 _CONTRACT_COLUMNS = (
@@ -66,19 +67,20 @@ def build_generation_packet(
         _contract_from_row(row),
         {"prompt_text": row["prompt_text"]},
     )
-    conn.execute(
-        """
-        UPDATE model_outputs
-        SET generation_packet_version = ?, generation_packet_hash = ?
-        WHERE evaluation_run_id = ? AND test_case_id = ?
-        """,
-        (
-            packet["packet_version"],
-            packet["content_hash"],
-            run_id,
-            test_case_id,
-        ),
-    )
+    with transaction(conn):
+        conn.execute(
+            """
+            UPDATE model_outputs
+            SET generation_packet_version = ?, generation_packet_hash = ?
+            WHERE evaluation_run_id = ? AND test_case_id = ?
+            """,
+            (
+                packet["packet_version"],
+                packet["content_hash"],
+                run_id,
+                test_case_id,
+            ),
+        )
     return packet
 
 
@@ -136,19 +138,20 @@ def build_blind_grader_packet(
         rubric=row["rubric"],
         error_taxonomy=row["error_taxonomy"],
     )
-    conn.execute(
-        """
-        UPDATE grader_results
-        SET blind_packet_version = ?, blind_packet_hash = ?
-        WHERE model_output_id = ? AND grader_condition_id = ?
-        """,
-        (
-            packet["packet_version"],
-            packet["content_hash"],
-            model_output_id,
-            grader_condition_id,
-        ),
-    )
+    with transaction(conn):
+        conn.execute(
+            """
+            UPDATE grader_results
+            SET blind_packet_version = ?, blind_packet_hash = ?
+            WHERE model_output_id = ? AND grader_condition_id = ?
+            """,
+            (
+                packet["packet_version"],
+                packet["content_hash"],
+                model_output_id,
+                grader_condition_id,
+            ),
+        )
     return packet
 
 
