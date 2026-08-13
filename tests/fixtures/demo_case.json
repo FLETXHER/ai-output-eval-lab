@@ -1,0 +1,14 @@
+{
+  "case_key": "demo-001",
+  "revision": 1,
+  "split": "dev",
+  "source_material": "星河随身灯重量为120克，包装内含USB-C充电线。",
+  "source_facts": [
+    {"fact_id": "F01", "text": "重量为120克"},
+    {"fact_id": "F02", "text": "包装内含USB-C充电线"}
+  ],
+  "required_fact_ids": ["F01"],
+  "explicit_forbidden_claims": ["防水"],
+  "task_notes": "请用简体中文生成结构化短内容，必须说明重量。",
+  "feasibility_qa_status": "pass"
+}
