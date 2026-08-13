@@ -96,6 +96,16 @@ def _assert_single_grader_condition_for_runs(
     return condition_ids
 
 
+def _assert_shared_grader_condition_for_runs(
+    conn: sqlite3.Connection, left_run_id: object, right_run_id: object
+) -> int:
+    left_conditions = _grader_condition_ids_for_runs(conn, (left_run_id,))
+    right_conditions = _grader_condition_ids_for_runs(conn, (right_run_id,))
+    if len(left_conditions) != 1 or len(right_conditions) != 1 or left_conditions != right_conditions:
+        raise ValueError("paired comparison requires one shared grader condition")
+    return next(iter(left_conditions))
+
+
 def _run_ids_for_comparison_group(
     conn: sqlite3.Connection, comparison_group_id: object
 ) -> tuple[int, ...]:
@@ -116,7 +126,7 @@ def _guard_query_grader_conditions(
     elif query_name == "paired_comparison":
         if len(params) < 2:
             raise ValueError("paired_comparison requires two run ids")
-        _assert_single_grader_condition_for_runs(conn, (params[0], params[1]))
+        _assert_shared_grader_condition_for_runs(conn, params[0], params[1])
     elif query_name == "review_coverage":
         if not params:
             raise ValueError("review_coverage requires a comparison group id")
@@ -170,10 +180,7 @@ def _comparison_label(left: object, right: object) -> str:
 def paired_comparison(conn: sqlite3.Connection, comparison_group_id: str) -> pd.DataFrame:
     """Compare the two fully matched runs without collapsing decision layers."""
     left, right = _comparable_runs(conn, comparison_group_id)
-    left_conditions = _grader_condition_ids_for_runs(conn, (left["id"],))
-    right_conditions = _grader_condition_ids_for_runs(conn, (right["id"],))
-    if len(left_conditions) != 1 or len(right_conditions) != 1 or left_conditions != right_conditions:
-        raise ValueError("paired comparison requires one shared grader condition")
+    _assert_shared_grader_condition_for_runs(conn, left["id"], right["id"])
     table = run_query(conn, "paired_comparison", (left["id"], right["id"], left["id"], right["id"]))
     table.insert(1, "left_prompt_version", left["version_label"])
     table.insert(2, "right_prompt_version", right["version_label"])

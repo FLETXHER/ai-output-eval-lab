@@ -263,3 +263,24 @@ def test_analysis_rejects_mixed_grader_conditions_instead_of_merging_rows(
             report()
 
     assert _database_state(conn) == before
+
+
+def test_direct_paired_query_requires_one_shared_condition_per_run(
+    initialized_connection: sqlite3.Connection, analysis_data: dict[str, int]
+) -> None:
+    conn = initialized_connection
+    v1_prompt_id = conn.execute(
+        "SELECT prompt_version_id FROM evaluation_runs WHERE id = ?",
+        (analysis_data["run_v1"],),
+    ).fetchone()[0]
+    run_without_grading = _run(conn, v1_prompt_id)
+    before = _database_state(conn)
+
+    with pytest.raises(ValueError, match="shared grader condition"):
+        run_query(
+            conn,
+            "paired_comparison",
+            (analysis_data["run_v1"], run_without_grading, analysis_data["run_v1"], run_without_grading),
+        )
+
+    assert _database_state(conn) == before
