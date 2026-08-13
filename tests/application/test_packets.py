@@ -353,6 +353,10 @@ def test_blind_human_review_builder_exposes_no_automatic_or_experiment_metadata(
         '{"title":"九月九日启动","summary":"原样回答"}'
     )
     assert first["payload"]["task_instructions"] == "标题需突出启动日期。"
+    contract_text = first["payload"]["user_task_output_contract"]
+    assert isinstance(contract_text, str)
+    for expected in ("title", "summary", "key_points", "4", "20", "60", "120", "6", "40", "简体中文"):
+        assert expected in contract_text
     assert first["payload"]["decision_options"] == [
         "pass",
         "fail",

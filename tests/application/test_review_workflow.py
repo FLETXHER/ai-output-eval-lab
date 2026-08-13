@@ -76,7 +76,11 @@ def _make_results(conn: sqlite3.Connection, repo_root: Path, *, total: int = 5) 
 def test_blind_review_packet_hides_automatic_and_experiment_metadata(conn, repo_root: Path) -> None:
     results, _ = _make_results(conn, repo_root)
     packet = build_blind_human_review_packet_for_result(conn, results[0])
-    assert set(packet["payload"]) == {"candidate_id", "source_material", "task_instructions", "constraints", "raw_model_response", "human_review_rubric", "decision_options"}
+    assert set(packet["payload"]) == {"candidate_id", "user_task_output_contract", "source_material", "task_instructions", "constraints", "raw_model_response", "human_review_rubric", "decision_options"}
+    contract_text = packet["payload"]["user_task_output_contract"]
+    assert isinstance(contract_text, str)
+    for expected in ("title", "summary", "key_points", "4", "20", "60", "120", "6", "40", "简体中文"):
+        assert expected in contract_text
     exposed = packet["text"] + json.dumps(packet["payload"], ensure_ascii=False)
     for forbidden in ("\"split\"", "FORBIDDEN_GENERATOR_PRODUCT", "FORBIDDEN_GRADER_PROMPT", "FORBIDDEN_CASE_SET"):
         assert forbidden not in exposed

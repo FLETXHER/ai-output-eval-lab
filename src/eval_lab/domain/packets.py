@@ -96,6 +96,7 @@ def render_blind_grader_packet(
 
 def render_blind_human_review_packet(
     candidate_id: str,
+    task_pack_contract: Mapping[str, object],
     source_material: str,
     task_instructions: str,
     constraints: Mapping[str, object],
@@ -107,6 +108,7 @@ def render_blind_human_review_packet(
     _validate_anonymous_candidate_id(candidate_id)
     payload: dict[str, object] = {
         "candidate_id": candidate_id,
+        "user_task_output_contract": _task_pack_contract_text(task_pack_contract),
         "source_material": _required_string(source_material, "source_material"),
         "task_instructions": _required_string(
             task_instructions, "task_instructions", allow_empty=True
@@ -125,6 +127,7 @@ def render_blind_human_review_packet(
     text = _render_sections(
         (
             ("匿名候选编号", payload["candidate_id"]),
+            ("用户任务与输出要求", payload["user_task_output_contract"]),
             ("来源材料", payload["source_material"]),
             ("用户可见任务说明", payload["task_instructions"]),
             ("用户可见约束", payload["constraints"]),

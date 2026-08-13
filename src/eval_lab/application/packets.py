@@ -166,10 +166,21 @@ def build_blind_human_review_packet(
             mo.raw_response,
             tc.source_material,
             tc.task_notes,
-            tc.explicit_forbidden_claims_json
+            tc.explicit_forbidden_claims_json,
+            tp.pack_key,
+            tp.contract_version,
+            tp.language,
+            tp.title_min_chars,
+            tp.title_max_chars,
+            tp.summary_min_chars,
+            tp.summary_max_chars,
+            tp.key_points_count,
+            tp.key_point_min_chars,
+            tp.key_point_max_chars
         FROM evaluation_results AS er
         JOIN model_outputs AS mo ON mo.id = er.model_output_id
         JOIN test_cases AS tc ON tc.id = mo.test_case_id
+        JOIN task_packs AS tp ON tp.id = tc.task_pack_id
         WHERE er.id = ?
         """,
         (evaluation_result_id,),
@@ -181,6 +192,7 @@ def build_blind_human_review_packet(
 
     return render_blind_human_review_packet(
         candidate_id=row["candidate_id"],
+        task_pack_contract=_contract_from_row(row),
         source_material=row["source_material"],
         task_instructions=row["task_notes"],
         constraints=_case_constraints(row, include_task_instructions=False),

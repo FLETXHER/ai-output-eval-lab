@@ -277,6 +277,7 @@ def test_blind_human_review_packet_has_a_separate_strict_allowlist() -> None:
     raw_response = '{"title":"候选回答","summary":"保持原样"}'
     packet = render_blind_human_review_packet(
         candidate_id="candidate-b93de1",
+        task_pack_contract=TASK_PACK_CONTRACT,
         source_material="仅供复核的来源材料",
         task_instructions="只依据来源，并以简体中文作答。",
         constraints={
@@ -291,6 +292,7 @@ def test_blind_human_review_packet_has_a_separate_strict_allowlist() -> None:
 
     assert list(packet["payload"]) == [
         "candidate_id",
+        "user_task_output_contract",
         "source_material",
         "task_instructions",
         "constraints",
@@ -299,12 +301,17 @@ def test_blind_human_review_packet_has_a_separate_strict_allowlist() -> None:
         "decision_options",
     ]
     assert packet["payload"]["raw_model_response"] == raw_response
+    contract_text = packet["payload"]["user_task_output_contract"]
+    assert isinstance(contract_text, str)
+    for expected in ("title", "summary", "key_points", "4", "20", "60", "120", "6", "40", "简体中文"):
+        assert expected in contract_text
     assert packet["payload"]["constraints"] == {
         "explicit_forbidden_claims": ["行业第一"]
     }
     exposed = packet["text"] + json.dumps(packet["payload"], ensure_ascii=False)
     for allowed in (
         "candidate-b93de1",
+        contract_text,
         "仅供复核的来源材料",
         "只依据来源，并以简体中文作答。",
         "行业第一",
