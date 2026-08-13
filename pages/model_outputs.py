@@ -9,7 +9,9 @@ from eval_lab.application.cases import load_case
 from eval_lab.application.outputs import evaluate_output_rules, record_model_output
 from eval_lab.application.packets import build_generation_packet
 from eval_lab.application.prompts import WorkflowError
+from eval_lab.application.runs import record_generator_visible_model
 from eval_lab.application.ui_queries import (
+    get_open_run_capture_context,
     get_model_output_slot,
     list_open_evaluation_runs,
     list_test_cases_for_split,
@@ -23,6 +25,8 @@ def render(conn: sqlite3.Connection) -> None:
     if context is None:
         return
     run_id, case_id = context
+    if not _render_generator_condition_control(conn, run_id):
+        return
     output = get_model_output_slot(conn, run_id, case_id)
     if output is not None and output["raw_response"] is not None:
         st.info("The first actual response is saved as immutable evidence.")
@@ -43,6 +47,30 @@ def render(conn: sqlite3.Connection) -> None:
 
     _render_actual_response_form(conn, run_id, case_id, packet)
     _render_technical_retry_form(conn, run_id, case_id, packet, output)
+
+
+def _render_generator_condition_control(conn: sqlite3.Connection, run_id: int) -> bool:
+    run = get_open_run_capture_context(conn, run_id)
+    if run is None or run["split"] != "dev":
+        return True
+    output_count = int(run["model_output_count"])
+    if output_count or run["generator_visible_model"] != "not_visible":
+        return True
+
+    st.subheader("Confirm generator condition before capture")
+    st.caption("Before the first response is captured, confirm not_visible or record the exact model name shown in the generator UI.")
+    with st.form("record_generator_visible_model"):
+        visible_model = st.text_input("Visible model (leave as not_visible only when no model name is shown)", value="not_visible")
+        submitted = st.form_submit_button("Confirm generator condition")
+    if not submitted:
+        return False
+    try:
+        recorded = record_generator_visible_model(conn, run_id, visible_model)
+    except (WorkflowError, LookupError, ValueError) as error:
+        show_validation_errors([str(error)])
+        return False
+    st.success(f"Generator condition recorded: {recorded}")
+    return True
 
 
 def _select_open_run_and_case(conn: sqlite3.Connection) -> tuple[int, int] | None:

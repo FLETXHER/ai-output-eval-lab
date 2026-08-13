@@ -229,6 +229,19 @@ def update_run_status(conn: sqlite3.Connection, run_id: int, status: str) -> Non
         conn.execute("UPDATE evaluation_runs SET status = ? WHERE id = ?", (status, run_id))
 
 
+def update_generator_visible_model(
+    conn: sqlite3.Connection, run_id: int, visible_model: str, updated_at: str
+) -> None:
+    """Persist the one authorized generator provenance field update."""
+    with transaction(conn):
+        conn.execute(
+            """UPDATE evaluation_runs
+            SET generator_visible_model = ?, updated_at = ?
+            WHERE id = ?""",
+            (visible_model, updated_at, run_id),
+        )
+
+
 def insert_model_output_slot(conn: sqlite3.Connection, data: Mapping[str, object]) -> int:
     return _insert(
         conn,

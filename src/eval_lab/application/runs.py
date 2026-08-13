@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import datetime, timezone
 import sqlite3
 
 from eval_lab.application.prompts import WorkflowError
+from eval_lab.domain.runs import validate_generator_visible_model_update
 from eval_lab.repositories.sqlite import (
     get_evaluation_run,
     insert_evaluation_run,
+    update_generator_visible_model,
     update_run_status,
 )
 
@@ -90,6 +93,32 @@ def close_run(conn: sqlite3.Connection, run_id: int) -> None:
     update_run_status(conn, run_id, "closed")
 
 
+def record_generator_visible_model(
+    conn: sqlite3.Connection, run_id: int, visible_model: object
+) -> str:
+    """Record the observed generator model once, before any Dev output exists."""
+    if not isinstance(visible_model, str) or not visible_model.strip():
+        raise WorkflowError("visible model must be a non-empty string")
+    run = get_evaluation_run(conn, run_id)
+    output_count = int(
+        conn.execute(
+            "SELECT COUNT(*) FROM model_outputs WHERE evaluation_run_id = ?", (run_id,)
+        ).fetchone()[0]
+    )
+    normalized_model = visible_model.strip()
+    errors = validate_generator_visible_model_update(
+        current_visible_model=run["generator_visible_model"],
+        proposed_visible_model=normalized_model,
+        run_status=run["status"],
+        split=run["split"],
+        model_output_count=output_count,
+    )
+    if errors:
+        raise WorkflowError("; ".join(errors))
+    update_generator_visible_model(conn, run_id, normalized_model, _utc_now())
+    return normalized_model
+
+
 def _validate_metadata(metadata: Mapping[str, object]) -> None:
     for key in _METADATA_KEYS:
         _require_non_empty(metadata.get(key), key)
@@ -112,3 +141,7 @@ def _mapping_value(mapping: Mapping[str, object], key: str) -> object:
     if key not in mapping.keys():
         raise WorkflowError(f"run metadata is missing {key}")
     return mapping[key]
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")

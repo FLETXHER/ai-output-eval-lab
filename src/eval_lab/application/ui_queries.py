@@ -30,6 +30,21 @@ def get_model_output_slot(
     ).fetchone()
 
 
+def get_open_run_capture_context(
+    conn: sqlite3.Connection, run_id: int
+) -> sqlite3.Row | None:
+    """Return only the provenance fields needed before output capture."""
+    return conn.execute(
+        """SELECT er.id, er.split, er.generator_visible_model,
+                  COUNT(mo.id) AS model_output_count
+        FROM evaluation_runs AS er
+        LEFT JOIN model_outputs AS mo ON mo.evaluation_run_id = er.id
+        WHERE er.id = ? AND er.status = 'open'
+        GROUP BY er.id, er.split, er.generator_visible_model""",
+        (run_id,),
+    ).fetchone()
+
+
 def list_captured_model_outputs(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     return list(
         conn.execute(

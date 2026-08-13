@@ -43,7 +43,7 @@ def _hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _seed(db_path, repo_root) -> dict[str, int]:
+def _seed(db_path, repo_root, *, visible_model: str = "UI_GENERATOR_MODEL") -> dict[str, int]:
     conn = connect(db_path)
     initialize_database(conn, repo_root / "db" / "schema.sql")
     pack_id = insert_task_pack(
@@ -92,7 +92,7 @@ def _seed(db_path, repo_root) -> dict[str, int]:
             "case_set_hash": "UI_CASE_SET_HASH",
             "contract_hash": canonical_json_hash(TASK_PACK_CONTRACT),
             "generator_product": "UI_GENERATOR_PRODUCT",
-            "generator_visible_model": "UI_GENERATOR_MODEL",
+            "generator_visible_model": visible_model,
             "environment_notes": "UI_ENVIRONMENT",
             "protocol_version": "1.0",
             "created_at": NOW,
@@ -181,6 +181,24 @@ def test_model_output_page_stores_technical_retry_separately(temporary_db_path, 
     assert row["raw_response"] is None
     assert row["technical_retry_count"] == 1
     assert json.loads(row["technical_retry_reasons_json"]) == ["network error"]
+    conn.close()
+
+
+def test_model_output_page_records_visible_model_before_first_capture(temporary_db_path, repo_root) -> None:
+    ids = _seed(temporary_db_path, repo_root, visible_model="not_visible")
+    page = _page_test("pages.model_outputs", str(temporary_db_path), str(repo_root))
+
+    page.text_input[0].set_value("GPT-5").run()
+    page.button[0].click().run()
+
+    assert not page.exception
+    conn = connect(temporary_db_path)
+    assert conn.execute(
+        "SELECT generator_visible_model FROM evaluation_runs WHERE id = ?", (ids["run_id"],)
+    ).fetchone()[0] == "GPT-5"
+    assert conn.execute(
+        "SELECT COUNT(*) FROM model_outputs WHERE evaluation_run_id = ?", (ids["run_id"],)
+    ).fetchone()[0] == 0
     conn.close()
 
 

@@ -8,7 +8,11 @@ import pytest
 
 from eval_lab.application.outputs import WorkflowError, evaluate_output_rules, record_model_output
 from eval_lab.application.prompts import create_prompt_version
-from eval_lab.application.runs import close_run, create_evaluation_run
+from eval_lab.application.runs import (
+    close_run,
+    create_evaluation_run,
+    record_generator_visible_model,
+)
 from eval_lab.domain.task_pack import TASK_PACK_CONTRACT, canonical_json_hash
 from eval_lab.repositories.sqlite import (
     connect,
@@ -104,6 +108,40 @@ def test_blank_actual_response_is_rejected_without_creating_quality_evidence(con
     )
     assert after == before
     assert conn.execute("SELECT COUNT(*) FROM rule_results").fetchone()[0] == 0
+
+
+def test_record_generator_visible_model_updates_only_pre_output_open_dev_run(
+    conn, run_and_case
+) -> None:
+    run_id, case_id = run_and_case
+
+    assert record_generator_visible_model(conn, run_id, " GPT-5 ") == "GPT-5"
+    persisted = conn.execute(
+        "SELECT generator_product, generator_visible_model, split FROM evaluation_runs WHERE id = ?",
+        (run_id,),
+    ).fetchone()
+    assert tuple(persisted) == ("ChatGPT", "GPT-5", "dev")
+
+    with pytest.raises(WorkflowError, match="otherwise immutable"):
+        record_generator_visible_model(conn, run_id, "GPT-5.1")
+
+    output_id = record_model_output(
+        conn, run_id, case_id, "packet-v1", "packet-hash", "first response", NOW
+    )
+    with pytest.raises(WorkflowError, match="model output"):
+        record_generator_visible_model(conn, run_id, "GPT-5.2")
+    assert output_id > 0
+
+
+def test_record_generator_visible_model_rejects_invalid_or_non_dev_run(conn, run_and_case) -> None:
+    run_id, _ = run_and_case
+
+    with pytest.raises(WorkflowError, match="non-empty"):
+        record_generator_visible_model(conn, run_id, " ")
+
+    conn.execute("UPDATE evaluation_runs SET split = 'holdout' WHERE id = ?", (run_id,))
+    with pytest.raises(WorkflowError, match="dev"):
+        record_generator_visible_model(conn, run_id, "GPT-5")
 
 
 def test_packet_provenance_closed_run_and_rules_persistence(conn, run_and_case) -> None:

@@ -22,10 +22,12 @@ or any IDs/hashes into ChatGPT.
 ## Required manual protocol
 
 1. Use the ChatGPT web UI for every Case in this run.
-2. Before starting, check whether the UI visibly names a model. If it does,
-   use that exact same visible model for all 18 Cases and record the exact
-   name in the Evaluation Run before continuing. If it does not, retain
-   `not_visible`; do not infer a model name.
+2. Before starting, open **Model Outputs** and select this Evaluation Run. In
+   **Confirm generator condition before capture**, record the exact visible
+   model name if the UI shows one; otherwise confirm `not_visible`. Do not
+   capture the first response until this condition has been recorded. If a
+   model is visible, use that same exact model for all 18 Cases; never infer a
+   name when it is not visible.
 3. For every Case, open a clean, new conversation. Do not reuse a thread.
 4. Open exactly one listed packet file and paste its complete model-facing
    text unchanged into that fresh conversation.
