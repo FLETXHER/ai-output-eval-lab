@@ -1,0 +1,245 @@
+from __future__ import annotations
+
+import hashlib
+import json
+import sqlite3
+
+from streamlit.testing.v1 import AppTest
+
+from eval_lab.application.grading import calculate_output_status, import_grader_result
+from eval_lab.application.outputs import evaluate_output_rules, record_model_output
+from eval_lab.application.packets import build_blind_grader_packet
+from eval_lab.application.prompts import create_prompt_version
+from eval_lab.application.runs import create_evaluation_run
+from eval_lab.domain.task_pack import TASK_PACK_CONTRACT, canonical_json_hash
+from eval_lab.repositories.sqlite import (
+    connect,
+    initialize_database,
+    insert_grader_condition,
+    insert_task_pack,
+    insert_test_case,
+)
+
+
+NOW = "2026-08-13T00:00:00Z"
+RAW_INVALID_JSON = "  {not valid JSON}  "
+
+
+def _page_test(page_module: str, db_path: str, repo_root: str) -> AppTest:
+    source = f"""
+import sqlite3
+import sys
+sys.path.insert(0, {repo_root!r})
+from {page_module} import render
+conn = sqlite3.connect({db_path!r})
+conn.row_factory = sqlite3.Row
+conn.execute('PRAGMA foreign_keys = ON')
+render(conn)
+"""
+    return AppTest.from_string(source).run()
+
+
+def _hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _seed(db_path, repo_root) -> dict[str, int]:
+    conn = connect(db_path)
+    initialize_database(conn, repo_root / "db" / "schema.sql")
+    pack_id = insert_task_pack(
+        conn,
+        {
+            "pack_key": TASK_PACK_CONTRACT["pack_key"],
+            "contract_version": TASK_PACK_CONTRACT["contract_version"],
+            "contract_hash": canonical_json_hash(TASK_PACK_CONTRACT),
+            "language": TASK_PACK_CONTRACT["language"],
+            "title_min_chars": 4,
+            "title_max_chars": 20,
+            "summary_min_chars": 60,
+            "summary_max_chars": 120,
+            "key_points_count": 3,
+            "key_point_min_chars": 6,
+            "key_point_max_chars": 40,
+            "created_at": NOW,
+            "updated_at": NOW,
+        },
+    )
+    case_id = insert_test_case(
+        conn,
+        {
+            "task_pack_id": pack_id,
+            "case_key": "ui-case",
+            "revision": 1,
+            "split": "dev",
+            "source_material": "UI_SOURCE_ONLY: device weighs 120 grams.",
+            "source_facts": [{"fact_id": "F01", "text": "device weighs 120 grams"}],
+            "required_fact_ids": ["F01"],
+            "explicit_forbidden_claims": ["waterproof"],
+            "task_notes": "UI_TASK_INSTRUCTIONS: include the 120 gram weight.",
+            "feasibility_qa_status": "pass",
+            "content_hash": "case-hash",
+            "created_at": NOW,
+            "updated_at": NOW,
+        },
+    )
+    prompt_id = create_prompt_version(conn, "UI_PROMPT_TEXT: output JSON.", "v1", "demo")
+    run_id = create_evaluation_run(
+        conn,
+        prompt_id,
+        "UI-COMP-01",
+        "dev",
+        {
+            "case_set_hash": "UI_CASE_SET_HASH",
+            "contract_hash": canonical_json_hash(TASK_PACK_CONTRACT),
+            "generator_product": "UI_GENERATOR_PRODUCT",
+            "generator_visible_model": "UI_GENERATOR_MODEL",
+            "environment_notes": "UI_ENVIRONMENT",
+            "protocol_version": "1.0",
+            "created_at": NOW,
+            "updated_at": NOW,
+        },
+    )
+    condition_id = insert_grader_condition(
+        conn,
+        {
+            "grader_product": "UI_GRADER_PRODUCT",
+            "grader_visible_model": "UI_GRADER_MODEL",
+            "grader_prompt": "UI_GRADER_PROMPT",
+            "grader_prompt_hash": _hash("UI_GRADER_PROMPT"),
+            "grader_prompt_version_label": "grader-v1",
+            "rubric": "UI_GRADER_RUBRIC",
+            "rubric_hash": _hash("UI_GRADER_RUBRIC"),
+            "rubric_version_label": "rubric-v1",
+            "error_taxonomy": "UI_ERROR_TAXONOMY",
+            "error_taxonomy_hash": _hash("UI_ERROR_TAXONOMY"),
+            "error_taxonomy_version_label": "taxonomy-v1",
+            "owner_approved_at": None,
+            "created_at": NOW,
+        },
+    )
+    conn.close()
+    return {"case_id": case_id, "run_id": run_id, "condition_id": condition_id}
+
+
+def _store_indeterminate_result(db_path, repo_root, ids: dict[str, int]) -> int:
+    conn = connect(db_path)
+    output_id = record_model_output(
+        conn,
+        ids["run_id"],
+        ids["case_id"],
+        "generation-1.0",
+        "a" * 64,
+        '{"title":"设备简介","summary":"该设备重量为120克，来源材料仅提供这一项事实。这里使用额外的中性表述来满足固定长度要求，但不增加任何可以被判断真假的外部信息。请仅基于给定材料生成结构化短内容，并保持表达清晰、简洁且忠实于来源。","key_points":["设备重量为120克","仅依据给定来源材料","不补充额外事实信息"]}',
+        NOW,
+    )
+    evaluate_output_rules(conn, output_id, TASK_PACK_CONTRACT, ["waterproof"])
+    condition = dict(conn.execute("SELECT * FROM grader_conditions WHERE id = ?", (ids["condition_id"],)).fetchone())
+    packet = build_blind_grader_packet(conn, output_id, ids["condition_id"])
+    payload = json.loads((repo_root / "tests" / "fixtures" / "demo_grader_indeterminate.json").read_text(encoding="utf-8"))
+    payload["blind_packet_version"] = packet["packet_version"]
+    payload["blind_packet_hash"] = packet["content_hash"]
+    grader_id = import_grader_result(conn, output_id, condition, payload)
+    result_id = calculate_output_status(conn, output_id, grader_id, ids["condition_id"])
+    conn.close()
+    return result_id
+
+
+def test_model_output_page_preserves_invalid_response_runs_rules_and_separates_packet_provenance(
+    temporary_db_path, repo_root
+) -> None:
+    ids = _seed(temporary_db_path, repo_root)
+    page = _page_test("pages.model_outputs", str(temporary_db_path), str(repo_root))
+    assert not page.exception
+    packet_text = page.code[0].value
+    assert "UI_SOURCE_ONLY" in packet_text
+    for forbidden in ("F01", "required_fact_ids", "v1", "UI_CASE_SET_HASH", "UI_GENERATOR_PRODUCT"):
+        assert forbidden not in packet_text
+    assert any("Generation packet version" in item.value for item in page.caption)
+    assert any("Generation packet hash" in item.value for item in page.caption)
+
+    page.text_area[0].set_value(RAW_INVALID_JSON)
+    page.text_input[0].set_value(NOW)
+    page.button[0].click().run()
+    assert not page.exception
+    conn = connect(temporary_db_path)
+    output = conn.execute("SELECT * FROM model_outputs WHERE evaluation_run_id = ?", (ids["run_id"],)).fetchone()
+    assert output["raw_response"] == RAW_INVALID_JSON
+    assert output["generation_packet_version"] == "generation-1.0"
+    assert output["generation_packet_hash"] == _hash(packet_text)
+    assert conn.execute("SELECT status FROM rule_results WHERE model_output_id = ? AND rule_key = 'json_parse_pass'", (output["id"],)).fetchone()[0] == "fail"
+    conn.close()
+    rendered = "\n".join(item.value for item in page.markdown)
+    assert "quality retry" not in rendered.lower()
+
+
+def test_model_output_page_stores_technical_retry_separately(temporary_db_path, repo_root) -> None:
+    ids = _seed(temporary_db_path, repo_root)
+    page = _page_test("pages.model_outputs", str(temporary_db_path), str(repo_root))
+    page.text_area[1].set_value("network error")
+    page.button[1].click().run()
+    assert not page.exception
+    conn = connect(temporary_db_path)
+    row = conn.execute("SELECT raw_response, technical_retry_count, technical_retry_reasons_json FROM model_outputs WHERE evaluation_run_id = ?", (ids["run_id"],)).fetchone()
+    assert row["raw_response"] is None
+    assert row["technical_retry_count"] == 1
+    assert json.loads(row["technical_retry_reasons_json"]) == ["network error"]
+    conn.close()
+
+
+def test_evaluation_page_blind_grader_packet_hides_experiment_metadata(temporary_db_path, repo_root) -> None:
+    ids = _seed(temporary_db_path, repo_root)
+    conn = connect(temporary_db_path)
+    output_id = record_model_output(conn, ids["run_id"], ids["case_id"], "generation-1.0", "a" * 64, "raw candidate", NOW)
+    conn.close()
+    page = _page_test("pages.evaluation", str(temporary_db_path), str(repo_root))
+    assert not page.exception
+    packet_text = page.code[0].value
+    for forbidden in ("v1", "UI_CASE_SET_HASH", "UI_GENERATOR_PRODUCT", "UI_GENERATOR_MODEL", "calculated_status", "human_review", "previous"):
+        assert forbidden not in packet_text
+    assert "candidate-" in packet_text
+    assert any("Blind Grader packet hash" in item.value for item in page.caption)
+    assert "api" not in "\n".join(item.value for item in page.markdown).lower()
+    assert output_id > 0
+
+
+def test_blind_human_review_hides_automatic_evidence_until_submission_then_shows_both_layers(
+    temporary_db_path, repo_root
+) -> None:
+    ids = _seed(temporary_db_path, repo_root)
+    result_id = _store_indeterminate_result(temporary_db_path, repo_root, ids)
+    page = _page_test("pages.evaluation", str(temporary_db_path), str(repo_root))
+    page.radio[0].set_value("Blind Human Review").run()
+    assert not page.exception
+    pre_submit = page.code[0].value
+    for expected in ("candidate-", "UI_SOURCE_ONLY", "UI_TASK_INSTRUCTIONS", "Human Review Rubric", "Decision Options"):
+        assert expected in pre_submit
+    for forbidden in ("UI_GRADER_PROMPT", "UI_GRADER_RUBRIC", "calculated_status", "primary_error_type", "v1", "UI_GENERATOR_PRODUCT", "UI-COMP-01"):
+        assert forbidden not in pre_submit
+    page.selectbox[1].set_value("pass")
+    page.text_area[0].set_value("independent evidence")
+    page.text_area[1].set_value("independent reason")
+    page.button[0].click().run()
+    assert not page.exception
+    rendered = "\n".join(item.value for item in [*page.markdown, *page.caption])
+    assert "calculated_status: indeterminate" in rendered
+    assert "final_decision: pass" in rendered
+    conn = connect(temporary_db_path)
+    assert conn.execute("SELECT calculated_status FROM evaluation_results WHERE id = ?", (result_id,)).fetchone()[0] == "indeterminate"
+    assert conn.execute("SELECT final_decision FROM human_reviews WHERE evaluation_result_id = ?", (result_id,)).fetchone()[0] == "pass"
+    conn.close()
+
+
+def test_analysis_page_separates_status_layers_and_read_only(temporary_db_path, repo_root) -> None:
+    ids = _seed(temporary_db_path, repo_root)
+    _store_indeterminate_result(temporary_db_path, repo_root, ids)
+    conn = connect(temporary_db_path)
+    before = "\n".join(conn.iterdump())
+    conn.close()
+    page = _page_test("pages.analysis", str(temporary_db_path), str(repo_root))
+    assert not page.exception
+    rendered = "\n".join(item.value for item in [*page.markdown, *page.caption])
+    for label in ("calculated_status", "final_decision", "Human Review coverage", "determinate", "indeterminate rate"):
+        assert label in rendered
+    conn = connect(temporary_db_path)
+    assert "\n".join(conn.iterdump()) == before
+    conn.close()

@@ -7,6 +7,9 @@ import streamlit as st
 
 from eval_lab.repositories.sqlite import connect, initialize_database, table_names
 from pages.overview import render as render_overview
+from pages.model_outputs import render as render_model_outputs
+from pages.evaluation import render as render_evaluation
+from pages.analysis import render as render_analysis
 from pages.prompt_versions import render as render_prompt_versions
 from pages.task_pack import render as render_task_pack
 from pages.test_cases import render as render_test_cases
@@ -47,12 +50,24 @@ def main() -> None:
     def prompt_versions_page() -> None:
         render_prompt_versions(conn)
 
+    def model_outputs_page() -> None:
+        render_model_outputs(conn)
+
+    def evaluation_page() -> None:
+        render_evaluation(conn)
+
+    def analysis_page() -> None:
+        render_analysis(conn)
+
     navigation = st.navigation(
         [
             st.Page(overview_page, title="Overview"),
             st.Page(task_packs_page, title="Task Packs"),
             st.Page(test_cases_page, title="Test Cases"),
             st.Page(prompt_versions_page, title="Prompt Versions"),
+            st.Page(model_outputs_page, title="Model Outputs"),
+            st.Page(evaluation_page, title="Evaluation"),
+            st.Page(analysis_page, title="Analysis"),
         ]
     )
     navigation.run()
