@@ -63,6 +63,9 @@ def validate_case_record(case: Mapping[str, object]) -> list[str]:
     else:
         source_text = source_material
 
+    if not _non_empty_string(case.get("task_notes")):
+        errors.append("task_notes must be a non-empty string")
+
     fact_ids = _validate_source_facts(case.get("source_facts"), source_text, errors)
     _validate_required_fact_ids(case.get("required_fact_ids"), fact_ids, errors)
     _validate_forbidden_claims(case.get("explicit_forbidden_claims"), errors)

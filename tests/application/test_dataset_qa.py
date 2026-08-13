@@ -108,3 +108,16 @@ def test_qa_reports_non_object_cases_instead_of_crashing() -> None:
 
     assert result["formal_ready"] is False
     assert "case[0] must be an object" in result["errors"]
+
+
+def test_qa_rejects_non_string_or_blank_task_notes() -> None:
+    numeric_notes = _case(1)
+    numeric_notes["task_notes"] = 42
+    blank_notes = _case(2)
+    blank_notes["task_notes"] = "  "
+
+    result = qa_case_set([numeric_notes, blank_notes], _task_pack())
+
+    assert result["formal_ready"] is False
+    assert "case[0]: task_notes must be a non-empty string" in result["errors"]
+    assert "case[1]: task_notes must be a non-empty string" in result["errors"]

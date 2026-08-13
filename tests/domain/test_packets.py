@@ -92,6 +92,14 @@ def test_generation_packet_is_repeatable_and_has_fixed_section_order() -> None:
     _assert_exact_text_hash(first)
 
 
+def test_generation_packet_rejects_blank_case_task_notes() -> None:
+    case = _generation_case()
+    case["task_notes"] = "  "
+
+    with pytest.raises(ValueError, match="task_notes must be a non-empty string"):
+        render_generation_packet(case, TASK_PACK_CONTRACT, _prompt_version())
+
+
 @pytest.mark.parametrize("changed_input", ["prompt", "source", "instructions"])
 def test_generation_hash_changes_when_model_facing_content_changes(
     changed_input: str,

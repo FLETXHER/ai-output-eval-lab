@@ -170,11 +170,7 @@ def _task_pack_contract_text(contract: Mapping[str, object]) -> str:
 
 
 def _case_instructions(case: Mapping[str, object]) -> str:
-    for key in ("task_notes", "task_instructions", "instructions"):
-        value = case.get(key)
-        if isinstance(value, str):
-            return _normalize_block(value)
-    return ""
+    return _required_text(case, "task_notes")
 
 
 def _required_text(mapping: Mapping[str, object], key: str) -> str:

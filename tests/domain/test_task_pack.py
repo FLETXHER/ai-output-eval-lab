@@ -24,6 +24,7 @@ def valid_case() -> dict[str, object]:
         ],
         "required_fact_ids": ["F01"],
         "explicit_forbidden_claims": ["全球首发"],
+        "task_notes": "请使用给定事实生成结构化短内容。",
         "feasibility_qa_status": "pending",
     }
 
@@ -90,6 +91,16 @@ def test_case_record_requires_nonempty_source_and_traceable_fact_text() -> None:
     assert "source_facts[0].text must appear in source_material" in validate_case_record(
         untraceable_fact
     )
+
+
+def test_case_record_requires_nonempty_task_notes() -> None:
+    numeric_notes = valid_case()
+    numeric_notes["task_notes"] = 42
+    blank_notes = valid_case()
+    blank_notes["task_notes"] = "  \n"
+
+    assert "task_notes must be a non-empty string" in validate_case_record(numeric_notes)
+    assert "task_notes must be a non-empty string" in validate_case_record(blank_notes)
 
 
 def test_case_record_rejects_invalid_split_and_feasibility_status() -> None:

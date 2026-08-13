@@ -102,6 +102,19 @@ def test_case_requires_hashes_and_traceability_metadata() -> None:
     assert any("traceability_metadata" in error for error in result["errors"])
 
 
+def test_case_rejects_non_string_or_blank_task_notes() -> None:
+    numeric_notes = _valid_case()
+    numeric_notes["task_notes"] = 42
+    blank_notes = _valid_case()
+    blank_notes["task_notes"] = "   "
+
+    numeric_result = parse_test_case_payload(numeric_notes)
+    blank_result = parse_test_case_payload(blank_notes)
+
+    assert "task_notes must be a non-empty string" in numeric_result["errors"]
+    assert "task_notes must be a non-empty string" in blank_result["errors"]
+
+
 def test_seed_loaders_reject_invalid_file_shapes(tmp_path) -> None:
     task_pack_path = tmp_path / "task-pack.json"
     cases_path = tmp_path / "cases.json"
