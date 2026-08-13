@@ -1,0 +1,26 @@
+{
+  "blind_packet_version": "blind-grader-1.0",
+  "blind_packet_hash": "__RENDERED_PACKET_HASH__",
+  "language_compliance": {
+    "label": "pass",
+    "reason": "The natural language content is Simplified Chinese.",
+    "evidence": "title, summary, and key_points are in Chinese."
+  },
+  "required_facts": [
+    {
+      "fact_id": "F01",
+      "label": "met",
+      "output_evidence": "The response states the required weight.",
+      "reason": "The meaning matches the source material."
+    }
+  ],
+  "unsupported_claims": [],
+  "readability": {
+    "label": "good",
+    "reason": "The response is concise.",
+    "evidence": "The JSON fields are readable."
+  },
+  "primary_error_type": null,
+  "secondary_error_types": [],
+  "grader_reason": "All hard semantic requirements are supported."
+}

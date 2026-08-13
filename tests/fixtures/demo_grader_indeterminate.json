@@ -1,0 +1,26 @@
+{
+  "blind_packet_version": "blind-grader-1.0",
+  "blind_packet_hash": "__RENDERED_PACKET_HASH__",
+  "language_compliance": {
+    "label": "indeterminate",
+    "reason": "The candidate text is too limited to determine the primary language.",
+    "evidence": "Only a product code appears in the response."
+  },
+  "required_facts": [
+    {
+      "fact_id": "F01",
+      "label": "indeterminate",
+      "output_evidence": "No reliable semantic evidence was found.",
+      "reason": "The field value is ambiguous."
+    }
+  ],
+  "unsupported_claims": [],
+  "readability": {
+    "label": "indeterminate",
+    "reason": "The text is incomplete.",
+    "evidence": "The response is minimal."
+  },
+  "primary_error_type": "ambiguous_evidence",
+  "secondary_error_types": [],
+  "grader_reason": "The available evidence is insufficient for a reliable decision."
+}
