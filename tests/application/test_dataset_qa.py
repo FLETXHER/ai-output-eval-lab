@@ -38,7 +38,7 @@ def _case(index: int, split: str = "dev") -> dict[str, object]:
     return {**case_without_hash, "content_hash": canonical_json_hash(case_without_hash)}
 
 
-def test_checked_in_seed_files_are_valid_but_explicitly_non_final(repo_root: Path) -> None:
+def test_checked_in_seed_files_are_owner_approved_formal_case_set(repo_root: Path) -> None:
     task_pack = load_task_pack_seed(repo_root / "db" / "seed_data" / "task_pack.json")
     cases = load_test_case_seed(repo_root / "db" / "seed_data" / "test_cases.json")
 
@@ -51,9 +51,10 @@ def test_checked_in_seed_files_are_valid_but_explicitly_non_final(repo_root: Pat
     assert result["total_cases"] == 24
     assert result["dev_cases"] == 18
     assert result["holdout_cases"] == 6
-    assert result["formal_ready"] is False
-    assert all(case["feasibility_qa_status"] == "pending" for case in cases["value"])
-    assert sum("feasibility_qa_status must be 'pass'" in error for error in result["errors"]) == 24
+    assert result["formal_ready"] is True
+    assert result["errors"] == []
+    assert result["case_set_hash"] == "c2555bafffd6d8ac0730a438fe0963530676d63beb7cea7b13a3116ae59f6bb5"
+    assert all(case["feasibility_qa_status"] == "pass" for case in cases["value"])
 
 
 def test_formal_ready_requires_valid_18_dev_6_holdout_set_and_shared_contract() -> None:

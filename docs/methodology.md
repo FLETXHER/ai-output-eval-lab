@@ -2,12 +2,21 @@
 
 AI Output Eval Lab evaluates one fixed task: Grounded Structured Brief
 Generation. The checked-in `db/seed_data/task_pack.json` records the fixed
-Simplified-Chinese JSON contract and its reproducible hash. At this engineering
-stage, `db/seed_data/test_cases.json` contains a 24-Case draft (18 Dev and 6
-Holdout Cases). Every Case remains `feasibility_qa_status: pending`: the file
-is not the formal dataset and must not be presented as owner-approved or ready
-for an experiment. Owner review of every Case is required before any status can
-be changed to `pass` or any formal Case-set hash/date is recorded.
+Simplified-Chinese JSON contract and its reproducible hash. The checked-in
+`db/seed_data/test_cases.json` is now the owner-approved formal Case Set: 24
+fictional, self-contained Cases with 18 Dev and 6 Holdout Cases.
+
+## Formal Case Set approval record
+
+Owner approval date: **2026-08-13**. The owner approved the reviewed Case
+content at case-set hash
+`a55dea2a4f2b24897edc720f548109e21da4733f58e88f57cc2f96c46ebaaf09`.
+Finalization then recorded `feasibility_qa_status: pass` for all 24 Cases and
+recomputed every affected Case content hash. Because the feasibility status is
+part of the canonical Case content, the resulting formal case-set hash is
+`c2555bafffd6d8ac0730a438fe0963530676d63beb7cea7b13a3116ae59f6bb5`.
+Dataset QA reports 24 total Cases, an 18/6 Dev/Holdout split, valid
+source-fact traceability, feasibility QA pass, and `formal_ready: true`.
 
 ## Case annotations and source precedence
 
@@ -39,6 +48,11 @@ and the shared Task Pack contract hash. Dataset QA validates annotations and
 hashes, then computes an order-independent case-set hash. These hashes make a
 reviewed collection reproducible; they do not turn the collection into a
 benchmark.
+
+The formal Case Set currently has an empty `explicit_forbidden_claims` list for
+every Case. The formal experiment must therefore not claim to have tested
+literal forbidden-claim detection; unsupported factual claims are primarily
+assessed by the closed-world AI Grader.
 
 ## Split discipline and interpretation
 
