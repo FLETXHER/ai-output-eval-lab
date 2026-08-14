@@ -182,6 +182,59 @@ def _add_first_output(conn: sqlite3.Connection, ids: dict[str, int]) -> int:
     )
 
 
+def _add_review_group(conn: sqlite3.Connection, ids: dict[str, int], group_id: str) -> int:
+    pack_id = conn.execute("SELECT task_pack_id FROM test_cases WHERE id = ?", (ids["case_id"],)).fetchone()[0]
+    case_id = insert_test_case(
+        conn,
+        {
+            "task_pack_id": pack_id,
+            "case_key": f"{group_id}-case",
+            "revision": 1,
+            "split": "dev",
+            "source_material": f"{group_id}-SOURCE",
+            "source_facts": [{"fact_id": "F01", "text": "group fact"}],
+            "required_fact_ids": ["F01"],
+            "explicit_forbidden_claims": [],
+            "task_notes": f"{group_id}-TASK",
+            "feasibility_qa_status": "pass",
+            "content_hash": f"{group_id}-CASE-HASH",
+            "created_at": NOW,
+            "updated_at": NOW,
+        },
+    )
+    prompt_id = create_prompt_version(conn, f"{group_id}-PROMPT", f"{group_id}-v1", "test")
+    run_id = create_evaluation_run(
+        conn,
+        prompt_id,
+        group_id,
+        "dev",
+        {
+            "case_set_hash": f"{group_id}-CASE-SET",
+            "contract_hash": canonical_json_hash(TASK_PACK_CONTRACT),
+            "generator_product": "UI_GENERATOR_PRODUCT",
+            "generator_visible_model": "UI_GENERATOR_MODEL",
+            "environment_notes": "UI_ENVIRONMENT",
+            "protocol_version": "1.0",
+            "created_at": NOW,
+            "updated_at": NOW,
+        },
+    )
+    output_id = record_model_output(
+        conn, run_id, case_id, "generation-1.0", "c" * 64, "group raw candidate", NOW
+    )
+    conn.execute(
+        """
+        INSERT INTO evaluation_results (
+            model_output_id, grader_result_id, grader_condition_id,
+            aggregation_rule_version, calculated_status, blocking_reasons_json, calculated_at
+            ) VALUES (?, NULL, ?, ?, ?, ?, ?)
+        """,
+        (output_id, ids["condition_id"], "aggregation-v1", "pass", "[]", NOW),
+    )
+    conn.commit()
+    return output_id
+
+
 def test_grader_condition_fresh_state_requires_explicit_selection(temporary_db_path, repo_root) -> None:
     ids = _seed(temporary_db_path, repo_root)
     conn = connect(temporary_db_path)
@@ -426,8 +479,39 @@ def test_blind_human_review_hides_automatic_evidence_until_submission_then_shows
     assert "final_decision（人工最终裁决）：pass" in rendered
     conn = connect(temporary_db_path)
     assert conn.execute("SELECT calculated_status FROM evaluation_results WHERE id = ?", (result_id,)).fetchone()[0] == "indeterminate"
-    assert conn.execute("SELECT final_decision FROM human_reviews WHERE evaluation_result_id = ?", (result_id,)).fetchone()[0] == "pass"
+    review = conn.execute("SELECT review_scope, final_decision FROM human_reviews WHERE evaluation_result_id = ?", (result_id,)).fetchone()
+    assert review["review_scope"] == "required"
+    assert review["final_decision"] == "pass"
     conn.close()
+
+
+def test_blind_human_review_batch_selector_does_not_expose_comparison_group_ids(
+    temporary_db_path, repo_root
+) -> None:
+    ids = _seed(temporary_db_path, repo_root)
+    conn = connect(temporary_db_path)
+    first_output_id = _add_first_output(conn, ids)
+    conn.execute(
+        """
+        INSERT INTO evaluation_results (
+            model_output_id, grader_result_id, grader_condition_id,
+            aggregation_rule_version, calculated_status, blocking_reasons_json, calculated_at
+        ) VALUES (?, NULL, ?, ?, ?, ?, ?)
+        """,
+        (first_output_id, ids["condition_id"], "aggregation-v1", "pass", "[]", NOW),
+    )
+    conn.commit()
+    _add_review_group(conn, ids, "SECOND-REVIEW-GROUP")
+    conn.close()
+
+    page = _page_test("pages.evaluation", str(temporary_db_path), str(repo_root))
+    page.radio[0].set_value("盲化人工复核").run()
+
+    assert not page.exception
+    batch_options = [str(option) for option in page.selectbox[0].options]
+    assert batch_options == ["评测批次 1", "评测批次 2"]
+    assert "UI-COMP-01" not in batch_options
+    assert "SECOND-REVIEW-GROUP" not in batch_options
 
 
 def test_analysis_page_separates_status_layers_and_read_only(temporary_db_path, repo_root) -> None:

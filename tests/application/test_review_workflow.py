@@ -16,8 +16,10 @@ from eval_lab.application.reviews import (
     build_blind_human_review_packet_for_result,
     record_human_review,
     required_review_targets,
+    review_target_scopes,
     select_predeclared_review_sample,
 )
+from eval_lab.application.ui_queries import list_required_unreviewed_evaluation_results
 from eval_lab.application.runs import create_evaluation_run
 from eval_lab.domain.task_pack import TASK_PACK_CONTRACT, canonical_json_hash
 from eval_lab.repositories.sqlite import connect, initialize_database, insert_grader_condition, insert_task_pack, insert_test_case
@@ -45,18 +47,34 @@ def _condition(conn: sqlite3.Connection) -> int:
     })
 
 
-def _make_results(conn: sqlite3.Connection, repo_root: Path, *, total: int = 5) -> tuple[list[int], int]:
+def _make_results(
+    conn: sqlite3.Connection,
+    repo_root: Path,
+    *,
+    total: int = 5,
+    shared_stratum: bool = False,
+) -> tuple[list[int], int]:
     pack = insert_task_pack(conn, {"pack_key": "review-pack", "contract_version": "1", "contract_hash": "h", "language": "zh-CN", "title_min_chars": 4, "title_max_chars": 20, "summary_min_chars": 60, "summary_max_chars": 120, "key_points_count": 3, "key_point_min_chars": 6, "key_point_max_chars": 40, "created_at": NOW, "updated_at": NOW})
     condition_id = _condition(conn)
     condition = dict(conn.execute("SELECT * FROM grader_conditions WHERE id = ?", (condition_id,)).fetchone())
     results: list[int] = []
+    shared_prompt_id: int | None = None
+    shared_run_id: int | None = None
     for index in range(total):
-        label = "v1" if index % 2 == 0 else "v2"
-        prompt_id = create_prompt_version(conn, f"prompt {index}", f"{label}-review-{index}", "baseline")
+        if shared_stratum and shared_prompt_id is not None and shared_run_id is not None:
+            prompt_id = shared_prompt_id
+            run_id = shared_run_id
+        else:
+            label = "v1" if index % 2 == 0 else "v2"
+            prompt_id = create_prompt_version(conn, f"prompt {index}", f"{label}-review-{index}", "baseline")
         case = {"task_pack_id": pack, "case_key": f"review-{index}", "revision": 1, "split": "dev", "source_material": f"Source {index} gives fact F01.", "source_facts": [{"fact_id": "F01", "text": f"Fact {index}"}], "required_fact_ids": ["F01"], "explicit_forbidden_claims": [], "task_notes": "FORBIDDEN_TASK_INSTRUCTIONS", "feasibility_qa_status": "pass", "content_hash": f"case-{index}", "created_at": NOW, "updated_at": NOW}
         case_id = insert_test_case(conn, case)
         metadata = {"case_set_hash": "FORBIDDEN_CASE_SET", "contract_hash": "h", "generator_product": "FORBIDDEN_GENERATOR_PRODUCT", "generator_visible_model": "FORBIDDEN_GENERATOR_MODEL", "environment_notes": "FORBIDDEN_ENV", "protocol_version": "FORBIDDEN_PROTOCOL", "created_at": NOW, "updated_at": NOW}
-        run_id = create_evaluation_run(conn, prompt_id, "REVIEW-COMP-01", "dev", metadata)
+        if not shared_stratum or shared_run_id is None:
+            run_id = create_evaluation_run(conn, prompt_id, "REVIEW-COMP-01", "dev", metadata)
+            if shared_stratum:
+                shared_prompt_id = prompt_id
+                shared_run_id = run_id
         output_id = record_model_output(conn, run_id, case_id, "generation-1.0", "a" * 64, '{"title":"Test","summary":"A sufficiently long summary with enough ordinary content to pass the check.","key_points":["One valid point","Two valid point","Three valid point"]}', NOW)
         evaluate_output_rules(conn, output_id, TASK_PACK_CONTRACT, [])
         packet = build_blind_grader_packet_for_output(conn, output_id, condition_id)
@@ -119,3 +137,64 @@ def test_required_review_queue_unions_exceptions_with_sample_from_remaining(conn
     assert results[1] in targets
     assert len(targets) >= 3
     assert targets == sorted(set(targets))
+
+
+def test_required_review_scopes_exclude_non_targets_and_label_required_or_sampled(
+    conn, repo_root: Path
+) -> None:
+    results, _ = _make_results(conn, repo_root, total=10, shared_stratum=True)
+
+    scopes = review_target_scopes(conn, "REVIEW-COMP-01")
+
+    assert scopes == review_target_scopes(conn, "REVIEW-COMP-01")
+    assert required_review_targets(conn, "REVIEW-COMP-01") == sorted(scopes)
+    assert scopes[results[0]] == "required"
+    assert scopes[results[1]] == "required"
+    assert set(scopes).issubset(set(results))
+    assert set(scopes.values()) == {"required", "sampled"}
+    assert sum(scope == "sampled" for scope in scopes.values()) == 2
+    assert len(set(results) - set(scopes)) == 6
+
+
+def test_review_target_query_returns_only_unreviewed_targets_without_automatic_fields(
+    conn, repo_root: Path
+) -> None:
+    results, _ = _make_results(conn, repo_root, total=10, shared_stratum=True)
+    scopes = review_target_scopes(conn, "REVIEW-COMP-01")
+
+    rows = list_required_unreviewed_evaluation_results(conn, "REVIEW-COMP-01")
+
+    assert {int(row["id"]) for row in rows} == set(scopes)
+    assert {row["review_scope"] for row in rows} == {"required", "sampled"}
+    assert all(set(row.keys()) == {"id", "candidate_id", "review_scope"} for row in rows)
+    assert not ({int(row["id"]) for row in rows} & (set(results) - set(scopes)))
+
+
+def test_reviewed_target_is_removed_from_formal_queue_and_scope_is_persisted(
+    conn, repo_root: Path
+) -> None:
+    results, _ = _make_results(conn, repo_root, total=10, shared_stratum=True)
+    scopes = review_target_scopes(conn, "REVIEW-COMP-01")
+    sampled_id = next(result_id for result_id, scope in scopes.items() if scope == "sampled")
+
+    review_id = record_human_review(
+        conn, sampled_id, "sampled", True, {"manual": "evidence"}, "Independent review", "pass"
+    )
+
+    assert review_id > 0
+    assert sampled_id not in {
+        int(row["id"]) for row in list_required_unreviewed_evaluation_results(conn, "REVIEW-COMP-01")
+    }
+    assert conn.execute("SELECT review_scope FROM human_reviews WHERE id = ?", (review_id,)).fetchone()[0] == "sampled"
+
+
+def test_record_human_review_rejects_non_target_or_wrong_scope(conn, repo_root: Path) -> None:
+    results, _ = _make_results(conn, repo_root, total=10, shared_stratum=True)
+    scopes = review_target_scopes(conn, "REVIEW-COMP-01")
+    non_target = next(result_id for result_id in results if result_id not in scopes)
+    sampled_id = next(result_id for result_id, scope in scopes.items() if scope == "sampled")
+
+    with pytest.raises(WorkflowError, match="not a predeclared review target"):
+        record_human_review(conn, non_target, "sampled", True, {}, "reason", "pass")
+    with pytest.raises(WorkflowError, match="review_scope must be sampled"):
+        record_human_review(conn, sampled_id, "required", True, {}, "reason", "pass")

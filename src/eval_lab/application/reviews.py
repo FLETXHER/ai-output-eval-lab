@@ -30,14 +30,23 @@ def select_predeclared_review_sample(
 
 def required_review_targets(conn: sqlite3.Connection, comparison_group_id: str) -> list[int]:
     """Queue all automatic exceptions plus the predeclared sample of remaining rows."""
-    _validate_sampling_inputs(comparison_group_id, 0.20)
+    return sorted(review_target_scopes(conn, comparison_group_id))
+
+
+def review_target_scopes(
+    conn: sqlite3.Connection, comparison_group_id: str, fraction: float = 0.20
+) -> dict[int, str]:
+    """Return each predeclared target and its immutable required/sampled scope."""
+    _validate_sampling_inputs(comparison_group_id, fraction)
     rows = _evaluation_rows(conn, comparison_group_id, include_grader_outcomes=True)
     required = [row for row in rows if _requires_review(row)]
     required_ids = {int(row["evaluation_result_id"]) for row in required}
     sampled_remaining = _sample_rows(
-        [row for row in rows if int(row["evaluation_result_id"]) not in required_ids], 0.20
+        [row for row in rows if int(row["evaluation_result_id"]) not in required_ids], fraction
     )
-    return sorted(required_ids | set(sampled_remaining))
+    scopes = {evaluation_result_id: "required" for evaluation_result_id in required_ids}
+    scopes.update({evaluation_result_id: "sampled" for evaluation_result_id in sampled_remaining})
+    return scopes
 
 
 def record_human_review(
@@ -50,10 +59,25 @@ def record_human_review(
     final_decision: str,
 ) -> int:
     """Persist one independent final decision without touching automatic evidence."""
-    if conn.execute(
-        "SELECT 1 FROM evaluation_results WHERE id = ?", (evaluation_result_id,)
-    ).fetchone() is None:
+    context = conn.execute(
+        """
+        SELECT run.comparison_group_id
+        FROM evaluation_results AS er
+        JOIN model_outputs AS mo ON mo.id = er.model_output_id
+        JOIN evaluation_runs AS run ON run.id = mo.evaluation_run_id
+        WHERE er.id = ?
+        """,
+        (evaluation_result_id,),
+    ).fetchone()
+    if context is None:
         raise WorkflowError(f"evaluation result {evaluation_result_id} was not found")
+    target_scope = review_target_scopes(conn, str(context["comparison_group_id"])).get(
+        evaluation_result_id
+    )
+    if target_scope is None:
+        raise WorkflowError("evaluation result is not a predeclared review target")
+    if review_scope != target_scope:
+        raise WorkflowError(f"review_scope must be {target_scope} for this target")
     if conn.execute(
         "SELECT 1 FROM human_reviews WHERE evaluation_result_id = ?", (evaluation_result_id,)
     ).fetchone() is not None:

@@ -19,7 +19,8 @@ from eval_lab.application.ui_queries import (
     get_grader_condition,
     list_captured_model_outputs,
     list_grader_condition_ids,
-    list_unreviewed_evaluation_results,
+    list_required_unreviewed_evaluation_results,
+    list_review_comparison_groups,
 )
 from eval_lab.ui.components import show_validation_errors
 
@@ -82,9 +83,22 @@ def _render_blind_grader_import(conn: sqlite3.Connection) -> None:
 
 
 def _render_blind_human_review(conn: sqlite3.Connection) -> None:
-    rows = list_unreviewed_evaluation_results(conn)
+    comparison_groups = list_review_comparison_groups(conn)
+    if not comparison_groups:
+        st.info("暂无可进入正式人工复核队列的评测结果。")
+        return
+    if len(comparison_groups) == 1:
+        comparison_group_id = comparison_groups[0]
+    else:
+        anonymous_batches = {
+            f"评测批次 {index}": group_id
+            for index, group_id in enumerate(comparison_groups, start=1)
+        }
+        selected_batch = st.selectbox("评测批次", list(anonymous_batches))
+        comparison_group_id = anonymous_batches[selected_batch]
+    rows = list_required_unreviewed_evaluation_results(conn, comparison_group_id)
     if not rows:
-        st.info("暂无待人工复核的自动评测结果。")
+        st.info("当前评测批次暂无待人工复核的正式目标。")
         return
     by_id = {int(row["id"]): row for row in rows}
     result_id = st.selectbox(
@@ -120,7 +134,7 @@ def _render_blind_human_review(conn: sqlite3.Connection) -> None:
         record_human_review(
             conn,
             result_id,
-            "manual",
+            str(by_id[result_id]["review_scope"]),
             True,
             {"reviewer_evidence": evidence},
             reason,
