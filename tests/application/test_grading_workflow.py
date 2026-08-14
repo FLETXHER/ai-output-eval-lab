@@ -279,7 +279,7 @@ def test_formal_grader_use_requires_owner_approved_condition(conn) -> None:
     approve_grader_condition(conn, condition_id, NOW)
     assert (
         build_blind_grader_packet_for_output(conn, output_id, condition_id)["packet_version"]
-        == "blind-grader-1.0"
+        == "blind-grader-1.1"
     )
 
 

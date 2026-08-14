@@ -229,6 +229,40 @@ def test_blind_grader_packet_contains_all_and_only_required_context() -> None:
     _assert_exact_text_hash(packet)
 
 
+def test_blind_grader_packet_prioritizes_evaluation_instruction_and_wraps_data() -> None:
+    packet = render_blind_grader_packet(
+        candidate_id="candidate-a7f3c2",
+        task_pack_contract=TASK_PACK_CONTRACT,
+        source_material="原始来源材料",
+        source_facts=[{"fact_id": "F01", "text": "来源事实"}],
+        required_fact_ids=["F01"],
+        constraints={"task_instructions": "必须包含来源事实", "explicit_forbidden_claims": []},
+        raw_model_response='{"title":"已有回答"}',
+        grader_prompt="批准的 Grader Prompt v1 内容",
+        rubric="批准的 Rubric v1 内容",
+        error_taxonomy="批准的 Error Taxonomy v1 内容",
+    )
+
+    assert packet["packet_version"] == "blind-grader-1.1"
+    text = packet["text"]
+    assert text.startswith("## 当前 Grader 执行说明")
+    assert "你当前唯一任务是评价一个已有模型回答" in text
+    assert "不得重新完成原始生成任务" in text
+    assert text.index("## 当前 Grader 执行说明") < text.index("## Grader Prompt")
+    assert text.index("## Grader Prompt") < text.index("## Rubric")
+    assert text.index("## Rubric") < text.index("## Error Taxonomy")
+    assert text.index("## Error Taxonomy") < text.index("## 待评价数据开始")
+    assert text.index("## 待评价数据开始") < text.index("## 原始用户任务与输出要求")
+    assert text.index("## 原始用户任务与输出要求") < text.index("## 原始模型回答")
+    assert text.index("## 原始模型回答") < text.index("## 待评价数据结束")
+    assert "批准的 Grader Prompt v1 内容" in text
+    assert "批准的 Rubric v1 内容" in text
+    assert "批准的 Error Taxonomy v1 内容" in text
+    assert "原始来源材料" in text
+    assert '{"title":"已有回答"}' in text
+    _assert_exact_text_hash(packet)
+
+
 def test_blind_packet_text_losslessly_encodes_raw_whitespace_without_rendered_trailing_space() -> None:
     raw_response = "first line  \r\nsecond line\t"
 

@@ -100,6 +100,9 @@ def test_semantic_gap_revision_changes_only_the_grader_prompt_asset(
     assert by_type["prompt_v1"]["content_hash"] == (
         "07aa48853dbe0ed54ff88a2476ce6ec9be2cac4d2680dc2b41d0fc36c392ae4f"
     )
+    assert by_type["grader_prompt_v1"]["content_hash"] == (
+        "c14dfcfde0d5902e2b42bdee399bb12d4eb81c62f546bee65cec9f215eb810b1"
+    )
     assert by_type["rubric_v1"]["content_hash"] == (
         "719cbba979f3657f5c164d947a03b02b77b8818c487259b8c850f68dd577b8eb"
     )

@@ -44,7 +44,17 @@ def _render_blind_grader_import(conn: sqlite3.Connection) -> None:
         "匿名候选", list(output_by_id),
         format_func=lambda value: str(output_by_id[value]["candidate_id"]),
     )
-    condition_id = st.selectbox("Grader 条件", condition_ids, format_func=lambda value: f"条件 {value}")
+    condition_id = st.selectbox(
+        "Grader 条件",
+        condition_ids,
+        index=None,
+        placeholder="请选择 Grader 条件",
+        format_func=lambda value: f"条件 {value}",
+        key="grader_condition_id",
+    )
+    if condition_id is None:
+        st.info("请先明确选择 Grader 条件，再生成盲化任务包或导入结果。")
+        return
     try:
         packet = build_blind_grader_packet_for_output(conn, output_id, condition_id)
     except (LookupError, ValueError) as error:

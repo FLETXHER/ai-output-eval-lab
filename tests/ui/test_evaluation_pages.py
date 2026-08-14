@@ -121,6 +121,125 @@ def _seed(db_path, repo_root, *, visible_model: str = "UI_GENERATOR_MODEL") -> d
     return {"case_id": case_id, "run_id": run_id, "condition_id": condition_id}
 
 
+def _add_grader_condition(conn: sqlite3.Connection, source_condition_id: int, product: str) -> int:
+    source = conn.execute(
+        "SELECT * FROM grader_conditions WHERE id = ?", (source_condition_id,)
+    ).fetchone()
+    assert source is not None
+    keys = (
+        "grader_product", "grader_visible_model", "grader_prompt", "grader_prompt_hash",
+        "grader_prompt_version_label", "rubric", "rubric_hash", "rubric_version_label",
+        "error_taxonomy", "error_taxonomy_hash", "error_taxonomy_version_label",
+        "owner_approved_at", "created_at",
+    )
+    values = {key: source[key] for key in keys}
+    values["grader_product"] = product
+    values["grader_prompt"] = f"{product} PROMPT"
+    values["grader_prompt_hash"] = _hash(values["grader_prompt"])
+    return insert_grader_condition(conn, values)
+
+
+def _add_second_output(conn: sqlite3.Connection, ids: dict[str, int], case_key: str) -> int:
+    pack_id = conn.execute("SELECT task_pack_id FROM test_cases WHERE id = ?", (ids["case_id"],)).fetchone()[0]
+    case_id = insert_test_case(
+        conn,
+        {
+            "task_pack_id": pack_id,
+            "case_key": case_key,
+            "revision": 1,
+            "split": "dev",
+            "source_material": "SECOND_SOURCE_ONLY",
+            "source_facts": [{"fact_id": "F01", "text": "second fact"}],
+            "required_fact_ids": ["F01"],
+            "explicit_forbidden_claims": [],
+            "task_notes": "SECOND_TASK_INSTRUCTIONS",
+            "feasibility_qa_status": "pass",
+            "content_hash": f"{case_key}-hash",
+            "created_at": NOW,
+            "updated_at": NOW,
+        },
+    )
+    return record_model_output(
+        conn,
+        ids["run_id"],
+        case_id,
+        "generation-1.0",
+        "b" * 64,
+        "second raw candidate",
+        NOW,
+    )
+
+
+def _add_first_output(conn: sqlite3.Connection, ids: dict[str, int]) -> int:
+    return record_model_output(
+        conn,
+        ids["run_id"],
+        ids["case_id"],
+        "generation-1.0",
+        "a" * 64,
+        "first raw candidate",
+        NOW,
+    )
+
+
+def test_grader_condition_fresh_state_requires_explicit_selection(temporary_db_path, repo_root) -> None:
+    ids = _seed(temporary_db_path, repo_root)
+    conn = connect(temporary_db_path)
+    _add_first_output(conn, ids)
+    conn.close()
+    page = _page_test("pages.evaluation", str(temporary_db_path), str(repo_root))
+    assert not page.exception
+    assert page.selectbox[1].value is None
+    assert not page.code
+    assert not page.button
+    assert any("明确选择 Grader 条件" in item.value for item in page.info)
+
+
+def test_grader_condition_unselected_cannot_submit_import(temporary_db_path, repo_root) -> None:
+    ids = _seed(temporary_db_path, repo_root)
+    conn = connect(temporary_db_path)
+    _add_first_output(conn, ids)
+    conn.close()
+    page = _page_test("pages.evaluation", str(temporary_db_path), str(repo_root))
+    assert page.selectbox[1].value is None
+    conn = connect(temporary_db_path)
+    assert conn.execute("SELECT COUNT(*) FROM grader_results").fetchone()[0] == 0
+    conn.close()
+    assert ids["run_id"] > 0
+
+
+def test_grader_condition_explicit_second_selection_builds_second_condition_packet(
+    temporary_db_path, repo_root
+) -> None:
+    ids = _seed(temporary_db_path, repo_root)
+    conn = connect(temporary_db_path)
+    _add_first_output(conn, ids)
+    second_condition_id = _add_grader_condition(conn, ids["condition_id"], "SECOND_CONDITION")
+    conn.close()
+    page = _page_test("pages.evaluation", str(temporary_db_path), str(repo_root))
+    page.selectbox[1].select(second_condition_id).run()
+    assert not page.exception
+    assert page.selectbox[1].value == second_condition_id
+    assert "SECOND_CONDITION PROMPT" in page.code[0].value
+
+
+def test_grader_condition_selection_survives_candidate_switch(
+    temporary_db_path, repo_root
+) -> None:
+    ids = _seed(temporary_db_path, repo_root)
+    conn = connect(temporary_db_path)
+    _add_first_output(conn, ids)
+    second_condition_id = _add_grader_condition(conn, ids["condition_id"], "SECOND_CONDITION")
+    second_output_id = _add_second_output(conn, ids, "ui-case-2")
+    conn.close()
+    page = _page_test("pages.evaluation", str(temporary_db_path), str(repo_root))
+    page.selectbox[1].select(second_condition_id).run()
+    page.selectbox[0].select(second_output_id).run()
+    assert not page.exception
+    assert page.selectbox[1].value == second_condition_id
+    assert "SECOND_CONDITION PROMPT" in page.code[0].value
+
+
 def _store_indeterminate_result(db_path, repo_root, ids: dict[str, int]) -> int:
     conn = connect(db_path)
     output_id = record_model_output(
@@ -211,6 +330,8 @@ def test_evaluation_page_blind_grader_packet_hides_experiment_metadata(temporary
     conn.close()
     page = _page_test("pages.evaluation", str(temporary_db_path), str(repo_root))
     assert not page.exception
+    page.selectbox[1].select(ids["condition_id"]).run()
+    assert not page.exception
     packet_text = page.code[0].value
     for forbidden in ("v1", "UI_CASE_SET_HASH", "UI_GENERATOR_PRODUCT", "UI_GENERATOR_MODEL", "calculated_status", "human_review", "previous"):
         assert forbidden not in packet_text
@@ -228,6 +349,7 @@ def test_evaluation_ui_passes_raw_grader_text_to_application_without_json_repair
     record_model_output(conn, ids["run_id"], ids["case_id"], "generation-1.0", "a" * 64, "raw candidate", NOW)
     conn.close()
     page = _page_test("pages.evaluation", str(temporary_db_path), str(repo_root))
+    page.selectbox[1].select(ids["condition_id"]).run()
     page.text_area[0].set_value("```json\n{}\n```")
     page.button[0].click().run()
     assert not page.exception
@@ -250,6 +372,7 @@ def test_evaluation_ui_imports_exact_seven_field_json_and_stores_packet_provenan
     raw_text = (repo_root / "tests" / "fixtures" / "demo_grader_valid.json").read_text(encoding="utf-8")
 
     page = _page_test("pages.evaluation", str(temporary_db_path), str(repo_root))
+    page.selectbox[1].select(ids["condition_id"]).run()
     page.text_area[0].set_value(raw_text)
     page.button[0].click().run()
     assert not page.exception
