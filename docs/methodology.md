@@ -102,3 +102,100 @@ Human Review final decision. The project has no production traffic, live A/B
 test, automated model API call, or claim of general model capability. Codex may
 assist engineering and drafting, while the owner approves formal cases,
 experiment assets, result review, and conclusions.
+
+## Final experiment state
+
+The owner-approved Formal Case Set contains 24 fictional, self-contained Cases:
+18 Dev and 6 Holdout. Its full Case Set hash is
+`c2555bafffd6d8ac0730a438fe0963530676d63beb7cea7b13a3116ae59f6bb5`.
+The per-run hashes are split-specific: the Dev run uses the Dev-only hash
+`a23f8d88ad1e35443d3b31bfcd0c60274b204cdbd0738d4ab21eefd24db3cb1c`, while the
+Formal Holdout pair uses the Holdout-only hash
+`b22b44b58162a69e74de8af7ab93f9f8507caf3f665f70a68ad630ead004bd6f`. A run's
+`case_set_hash` is therefore not automatically the full 24-Case hash.
+
+Prompt v1 is frozen under hash
+`07aa48853dbe0ed54ff88a2476ce6ec9be2cac4d2680dc2b41d0fc36c392ae4f`.
+After the closed Dev v1 run and failure analysis, the owner approved and froze
+Prompt v2 under hash
+`46198292143fa675fc9ad2cb0e724b6811aa3f2455b05f19a75f12e04aeaae74`.
+The v2 change was deliberately narrow: it kept the formal summary range at
+60--120 characters, added an approximate 70--100 generation target, and added
+a silent check that may only use directly supported source facts when adjusting
+length. The 70--100 range is a generation target, not a hard rule.
+
+Formal Run 1 is the closed Dev v1 baseline (18 outputs, 12 pass, 6 fail,
+0 indeterminate). All six failures were `summary_length` failures with
+55--59-character summaries; JSON/schema, title, key-point, required-fact,
+groundedness, language, and readability checks did not fail. The only valid
+Prompt v2 design evidence came from this Dev failure analysis; Holdout was not
+used to tune the prompt.
+
+The superseded Holdout shells, Run 2 and Run 3 in `HOLDOUT-COMP-01`, used the
+Dev-only hash, contained zero outputs and zero evaluations, and remain closed
+for provenance history. They are not Formal Holdout evidence. The valid pair is
+Run 4 (v1) and Run 5 (v2) in `HOLDOUT-COMP-02`, both closed, using the Holdout
+hash, the same generator condition (`ChatGPT web UI (manual)`, visible model
+`GPT-5.6 Sol`), `manual-generation-v1`, and Grader Condition 2.
+
+## Evaluation layers and final interpretation
+
+The primary comparison layer is the persisted automatic
+`evaluation_results.calculated_status`. It is computed from deterministic Rule
+Results and the pointwise blind Grader only; Human Review never recalculates or
+overwrites it. The Human Review layer is reported separately as original
+decision, correction decision (if any), and effective decision.
+
+The Formal Holdout automatic result was 1 improved, 5 unchanged, 0 regressed,
+and 0 indeterminate across six paired Cases. The sole improvement was
+`brief-holdout-03`, where `summary_length` changed from fail to pass. v1 had
+one summary-length failure and 5/6 summaries within 60--120; v2 had zero
+summary-length failures and 6/6 within 60--120. Only 2/6 v2 summaries fell in
+the 70--100 generation target, so the hard-rule improvement and the exact target
+hit rate must not be conflated.
+
+Across the Holdout pair, all 36 required facts were met, unsupported-claim
+outputs were zero, language was 12/12 pass, and readability was 12/12 pass.
+No new JSON/schema, title, key-point, language, readability, groundedness, or
+other deterministic regression was observed. These are descriptive results for
+this six-Case Formal Holdout, not statistical validation or a benchmark.
+
+## Human Review correction methodology
+
+Four sampled Holdout Human Reviews (reviews 5--8, evaluations 21, 22, 24, and
+30) were later classified as procedure-invalid. The review packet renderer used
+JSON-string encoding for raw responses with a trailing newline, and reviewers
+mistook the display-layer quotes and escapes for the stored response's root
+type. The original reviews remain immutable historical records.
+
+An owner-authorized, append-only correction workflow recorded four correction
+targets and four corrections with `review_mode: corrective-re-review`. All four
+corrected decisions and effective decisions are `pass`. This correction layer
+does not modify model outputs, Rules, Grader results, evaluation results, or
+automatic `calculated_status`.
+
+## Grader reliability and provenance artifacts
+
+Two Holdout Grader records have `primary_error_type: other`:
+`candidate-8ef4e1268d13f5f7` and `candidate-ffa603f79e0d6631`. Their reasons
+contain JSON wrapper/format interpretations that are inconsistent with the
+deterministic layer, so they are recorded as possible Grader diagnostic
+overreach. This lowers confidence in those diagnostic explanations but does
+not change the independently persisted automatic results or paired outcome.
+
+Prompt v2's lifecycle call order was create, approve, then freeze. A caller
+pre-captured timestamps, producing a microsecond-scale ordering artifact in
+which approval/freeze can precede `created_at`; this is not a lifecycle-order
+failure and the historical timestamps are not rewritten. The project also
+retains the superseded empty Run 2/3 records rather than deleting provenance.
+
+## Owner decision and claim boundary
+
+The owner decision for this project is **Recommend Prompt v2**, with
+**Moderate** confidence, for this Grounded Structured Brief Generation setup.
+The recommendation is based on the isolated Dev failure mode, the matching
+Holdout v1 failure and v2 repair, zero observed regressions, and stable semantic
+guardrails. It does not claim statistical significance, universal superiority,
+all-domain generalization, production performance, permanent elimination of
+summary-length errors, or reliable 70--100 targeting. Broader validation is
+optional future work, not a prerequisite to conclude this current experiment.
