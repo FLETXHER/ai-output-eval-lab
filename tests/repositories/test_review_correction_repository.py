@@ -95,6 +95,23 @@ def _review_graph(conn: sqlite3.Connection) -> tuple[int, int]:
 
 def test_correction_table_is_append_only_and_preserves_original_review(conn: sqlite3.Connection) -> None:
     review_id, result_id = _review_graph(conn)
+    with pytest.raises(sqlite3.IntegrityError, match="requires an authorized target"):
+        insert_human_review_correction(conn, {
+            "original_human_review_id": review_id,
+            "evaluation_result_id": result_id,
+            "review_mode": "corrective-re-review",
+            "correction_reason": "procedure-invalid",
+            "reviewer_evidence": {"raw_root": "object"},
+            "reviewer_reason": "The stored response is an object.",
+            "corrected_final_decision": "pass",
+            "corrected_at": NOW,
+        })
+    insert_human_review_correction_target(conn, {
+        "original_human_review_id": review_id,
+        "evaluation_result_id": result_id,
+        "authorization_reason": "procedure-invalid review",
+        "authorized_at": NOW,
+    })
     correction_id = insert_human_review_correction(conn, {
         "original_human_review_id": review_id,
         "evaluation_result_id": result_id,
@@ -128,7 +145,13 @@ def test_correction_table_is_append_only_and_preserves_original_review(conn: sql
 
 def test_correction_foreign_key_and_original_evaluation_pair_are_enforced(conn: sqlite3.Connection) -> None:
     review_id, result_id = _review_graph(conn)
-    with pytest.raises(sqlite3.IntegrityError, match="evaluation_result_id"):
+    insert_human_review_correction_target(conn, {
+        "original_human_review_id": review_id,
+        "evaluation_result_id": result_id,
+        "authorization_reason": "procedure-invalid review",
+        "authorized_at": NOW,
+    })
+    with pytest.raises(sqlite3.IntegrityError):
         insert_human_review_correction(conn, {
             "original_human_review_id": review_id, "evaluation_result_id": result_id + 1,
             "review_mode": "corrective-re-review", "correction_reason": "reason",

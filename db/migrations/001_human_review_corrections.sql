@@ -67,3 +67,16 @@ FOR EACH ROW
 BEGIN
     SELECT RAISE(ABORT, 'human review correction targets are append-only');
 END;
+
+CREATE TRIGGER IF NOT EXISTS human_review_corrections_requires_authorized_target
+BEFORE INSERT ON human_review_corrections
+FOR EACH ROW
+WHEN NOT EXISTS (
+    SELECT 1
+    FROM human_review_correction_targets
+    WHERE original_human_review_id = NEW.original_human_review_id
+      AND evaluation_result_id = NEW.evaluation_result_id
+)
+BEGIN
+    SELECT RAISE(ABORT, 'human review correction requires an authorized target');
+END;
