@@ -15,7 +15,10 @@ from eval_lab.analysis.reports import (
     run_summary,
     status_distribution,
 )
-from eval_lab.application.reviews import record_human_review_correction
+from eval_lab.application.reviews import (
+    authorize_human_review_correction_target,
+    record_human_review_correction,
+)
 from eval_lab.repositories.sqlite import (
     connect,
     initialize_database,
@@ -316,6 +319,9 @@ def test_analysis_exposes_original_corrected_and_effective_decisions_without_cha
     review_id = int(conn.execute(
         "SELECT id FROM human_reviews WHERE evaluation_result_id = ?", (result_id,)
     ).fetchone()[0])
+    authorize_human_review_correction_target(
+        conn, review_id, result_id, "procedure-invalid review", authorized_at=NOW
+    )
     record_human_review_correction(
         conn, review_id, result_id, CORRECTION_REASON,
         {"raw_root": "object"}, "Corrective evidence", "pass", corrected_at=NOW

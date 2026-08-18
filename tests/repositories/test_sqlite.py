@@ -26,6 +26,7 @@ APPROVED_TABLES = {
     "grader_fact_results",
     "evaluation_results",
     "human_reviews",
+    "human_review_correction_targets",
     "human_review_corrections",
 }
 
@@ -172,6 +173,10 @@ def test_human_review_correction_migration_is_atomic_and_idempotent(
         assert "human_review_corrections" in table_names(conn)
         assert conn.execute(
             "SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'human_review_corrections_%'"
+        ).fetchone()[0] == 3
+        assert "human_review_correction_targets" in table_names(conn)
+        assert conn.execute(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'human_review_correction_targets_%'"
         ).fetchone()[0] == 3
     finally:
         conn.close()

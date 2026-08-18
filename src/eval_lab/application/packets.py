@@ -228,6 +228,8 @@ def build_corrective_human_review_packet(
             tp.key_point_max_chars
         FROM evaluation_results AS er
         JOIN human_reviews AS hr ON hr.evaluation_result_id = er.id
+        JOIN human_review_correction_targets AS hrt
+          ON hrt.original_human_review_id = hr.id
         JOIN model_outputs AS mo ON mo.id = er.model_output_id
         JOIN test_cases AS tc ON tc.id = mo.test_case_id
         JOIN task_packs AS tp ON tp.id = tc.task_pack_id

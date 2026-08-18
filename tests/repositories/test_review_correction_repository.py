@@ -19,6 +19,8 @@ from eval_lab.repositories.sqlite import (
     insert_test_case,
     insert_human_review_correction,
     get_human_review_correction_for_review,
+    insert_human_review_correction_target,
+    get_human_review_correction_target_for_review,
 )
 
 
@@ -132,4 +134,38 @@ def test_correction_foreign_key_and_original_evaluation_pair_are_enforced(conn: 
             "review_mode": "corrective-re-review", "correction_reason": "reason",
             "reviewer_evidence": {"evidence": True}, "reviewer_reason": "reason",
             "corrected_final_decision": "pass", "corrected_at": NOW,
+        })
+
+
+def test_correction_target_is_append_only_and_matches_original_review(conn: sqlite3.Connection) -> None:
+    review_id, result_id = _review_graph(conn)
+    target_id = insert_human_review_correction_target(conn, {
+        "original_human_review_id": review_id,
+        "evaluation_result_id": result_id,
+        "authorization_reason": "procedure-invalid review",
+        "authorized_at": NOW,
+    })
+    assert target_id > 0
+    assert get_human_review_correction_target_for_review(conn, review_id)["evaluation_result_id"] == result_id
+    with pytest.raises(sqlite3.IntegrityError, match="UNIQUE"):
+        insert_human_review_correction_target(conn, {
+            "original_human_review_id": review_id,
+            "evaluation_result_id": result_id,
+            "authorization_reason": "second authorization",
+            "authorized_at": NOW,
+        })
+    with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+        conn.execute(
+            "UPDATE human_review_correction_targets SET authorization_reason = 'changed' WHERE id = ?",
+            (target_id,),
+        )
+    with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+        conn.execute("DELETE FROM human_review_correction_targets WHERE id = ?", (target_id,))
+
+    with pytest.raises(sqlite3.IntegrityError, match="evaluation_result_id"):
+        insert_human_review_correction_target(conn, {
+            "original_human_review_id": review_id,
+            "evaluation_result_id": result_id + 1,
+            "authorization_reason": "mismatched authorization",
+            "authorized_at": NOW,
         })

@@ -10,6 +10,7 @@ from eval_lab.application.grading import calculate_output_status, import_grader_
 from eval_lab.application.outputs import evaluate_output_rules, record_model_output
 from eval_lab.application.packets import build_blind_grader_packet
 from eval_lab.application.prompts import create_prompt_version
+from eval_lab.application.reviews import authorize_human_review_correction_target
 from eval_lab.application.runs import create_evaluation_run
 from eval_lab.domain.task_pack import TASK_PACK_CONTRACT, canonical_json_hash
 from eval_lab.repositories.sqlite import (
@@ -497,7 +498,7 @@ def test_corrective_human_review_path_displays_literal_raw_response_without_auto
         (result_id,),
     )
     conn.commit()
-    insert_human_review(
+    review_id = insert_human_review(
         conn,
         {
             "evaluation_result_id": result_id,
@@ -508,6 +509,9 @@ def test_corrective_human_review_path_displays_literal_raw_response_without_auto
             "final_decision": "fail",
             "reviewed_at": NOW,
         },
+    )
+    authorize_human_review_correction_target(
+        conn, review_id, result_id, "procedure-invalid review", authorized_at=NOW
     )
     conn.close()
 

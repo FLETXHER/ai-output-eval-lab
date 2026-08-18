@@ -7,6 +7,7 @@ import sqlite3
 import pytest
 
 from eval_lab.application.reviews import (
+    authorize_human_review_correction_target,
     WorkflowError,
     build_corrective_human_review_packet_for_result,
     effective_human_review_decision,
@@ -46,32 +47,32 @@ def conn(temporary_db_path: Path, repo_root: Path):
     connection.close()
 
 
-def _review_graph(conn: sqlite3.Connection) -> tuple[int, int]:
+def _review_graph(conn: sqlite3.Connection, suffix: str = "") -> tuple[int, int]:
     pack_id = insert_task_pack(conn, {
-        "pack_key": "correction-app-pack", "contract_version": "v1", "contract_hash": "contract",
+        "pack_key": f"correction-app-pack{suffix}", "contract_version": "v1", "contract_hash": "contract",
         "language": "zh-CN", "title_min_chars": 4, "title_max_chars": 20,
         "summary_min_chars": 60, "summary_max_chars": 120, "key_points_count": 3,
         "key_point_min_chars": 6, "key_point_max_chars": 40, "created_at": NOW, "updated_at": NOW,
     })
     case_id = insert_test_case(conn, {
-        "task_pack_id": pack_id, "case_key": "correction-app-case", "revision": 1, "split": "holdout",
+        "task_pack_id": pack_id, "case_key": f"correction-app-case{suffix}", "revision": 1, "split": "holdout",
         "source_material": "来源材料", "source_facts": [{"fact_id": "F01", "text": "事实"}],
         "required_fact_ids": ["F01"], "explicit_forbidden_claims": [], "task_notes": "任务说明",
         "feasibility_qa_status": "pass", "content_hash": "case", "created_at": NOW, "updated_at": NOW,
     })
     prompt_id = insert_prompt_version(conn, {
-        "version_label": "v1", "prompt_text": "prompt", "change_reason": "baseline",
+        "version_label": f"v1{suffix}", "prompt_text": "prompt", "change_reason": "baseline",
         "content_hash": "prompt", "status": "frozen", "owner_approved_at": NOW,
         "frozen_at": NOW, "created_at": NOW, "updated_at": NOW,
     })
     run_id = insert_evaluation_run(conn, {
-        "comparison_group_id": "CORRECTION-APP-COMP", "prompt_version_id": prompt_id, "split": "holdout",
+        "comparison_group_id": f"CORRECTION-APP-COMP{suffix}", "prompt_version_id": prompt_id, "split": "holdout",
         "case_set_hash": "cases", "contract_hash": "contract", "generator_product": "manual",
         "generator_visible_model": "not_visible", "environment_notes": "same", "protocol_version": "v1",
         "status": "open", "created_at": NOW, "updated_at": NOW,
     })
     output_id = insert_model_output_slot(conn, {
-        "evaluation_run_id": run_id, "test_case_id": case_id, "candidate_id": "candidate-a1b2c3",
+        "evaluation_run_id": run_id, "test_case_id": case_id, "candidate_id": f"candidate-a1b2c3{suffix}",
         "generation_packet_version": "generation-1.0", "generation_packet_hash": "a" * 64,
         "raw_response": '{"title":"回答","summary":"原始回答文本。","key_points":["第一条","第二条","第三条"]}\n',
         "output_hash": "b" * 64, "generated_at": NOW, "technical_retry_count": 0,
@@ -79,9 +80,9 @@ def _review_graph(conn: sqlite3.Connection) -> tuple[int, int]:
     })
     condition_id = insert_grader_condition(conn, {
         "grader_product": "grader", "grader_visible_model": "not_visible", "grader_prompt": "prompt",
-        "grader_prompt_hash": "grader-prompt", "grader_prompt_version_label": "v1", "rubric": "rubric",
-        "rubric_hash": "rubric", "rubric_version_label": "v1", "error_taxonomy": "taxonomy",
-        "error_taxonomy_hash": "taxonomy", "error_taxonomy_version_label": "v1",
+        "grader_prompt_hash": f"grader-prompt{suffix}", "grader_prompt_version_label": "v1", "rubric": "rubric",
+        "rubric_hash": f"rubric{suffix}", "rubric_version_label": "v1", "error_taxonomy": "taxonomy",
+        "error_taxonomy_hash": f"taxonomy{suffix}", "error_taxonomy_version_label": "v1",
         "owner_approved_at": NOW, "created_at": NOW,
     })
     grader_id = insert_grader_result(conn, {
@@ -107,6 +108,9 @@ def _review_graph(conn: sqlite3.Connection) -> tuple[int, int]:
 
 def test_correction_workflow_is_append_only_and_effective_layer_is_separate(conn: sqlite3.Connection) -> None:
     review_id, result_id = _review_graph(conn)
+    authorize_human_review_correction_target(
+        conn, review_id, result_id, "procedure-invalid review", authorized_at=NOW
+    )
     automatic_before = conn.execute(
         "SELECT calculated_status FROM evaluation_results WHERE id = ?", (result_id,)
     ).fetchone()[0]
@@ -151,6 +155,10 @@ def test_correction_ui_target_query_is_candidate_only_and_removes_corrected_targ
     conn: sqlite3.Connection,
 ) -> None:
     review_id, result_id = _review_graph(conn)
+    assert list_uncorrected_human_review_targets(conn) == []
+    authorize_human_review_correction_target(
+        conn, review_id, result_id, "procedure-invalid review", authorized_at=NOW
+    )
     rows = list_uncorrected_human_review_targets(conn)
     assert rows == [{
         "human_review_id": review_id,
@@ -166,6 +174,9 @@ def test_correction_ui_target_query_is_candidate_only_and_removes_corrected_targ
 
 def test_correction_workflow_rejects_invalid_decision(conn: sqlite3.Connection) -> None:
     review_id, result_id = _review_graph(conn)
+    authorize_human_review_correction_target(
+        conn, review_id, result_id, "procedure-invalid review", authorized_at=NOW
+    )
     with pytest.raises(WorkflowError, match="corrected_final_decision"):
         record_human_review_correction(
             conn, review_id, result_id, CORRECTION_REASON,
@@ -175,6 +186,9 @@ def test_correction_workflow_rejects_invalid_decision(conn: sqlite3.Connection) 
 
 def test_correction_workflow_rejects_empty_reason(conn: sqlite3.Connection) -> None:
     review_id, result_id = _review_graph(conn)
+    authorize_human_review_correction_target(
+        conn, review_id, result_id, "procedure-invalid review", authorized_at=NOW
+    )
     with pytest.raises(WorkflowError, match="correction_reason"):
         record_human_review_correction(
             conn, review_id, result_id, " ", {"evidence": "valid"}, "reason", "pass", corrected_at=NOW
@@ -199,7 +213,10 @@ def test_correction_workflow_rejects_mismatched_evaluation_result(conn: sqlite3.
 
 
 def test_correction_packet_has_literal_raw_response_and_blind_allowlist(conn: sqlite3.Connection) -> None:
-    _, result_id = _review_graph(conn)
+    review_id, result_id = _review_graph(conn)
+    authorize_human_review_correction_target(
+        conn, review_id, result_id, "procedure-invalid review", authorized_at=NOW
+    )
     packet = build_corrective_human_review_packet_for_result(conn, result_id)
     raw_response = packet["payload"]["raw_model_response"]
     assert packet["packet_version"] == "blind-human-review-1.1"
@@ -212,3 +229,34 @@ def test_correction_packet_has_literal_raw_response_and_blind_allowlist(conn: sq
     exposed = packet["text"] + json.dumps(packet["payload"], ensure_ascii=False)
     for forbidden in ("calculated_status", "grader_result", "prompt_version", "HOLDOUT-COMP"):
         assert forbidden not in exposed
+
+
+def test_unapproved_human_review_cannot_be_corrected(conn: sqlite3.Connection) -> None:
+    review_id, result_id = _review_graph(conn)
+    with pytest.raises(WorkflowError, match="not authorized"):
+        record_human_review_correction(
+            conn, review_id, result_id, CORRECTION_REASON,
+            {"raw_root": "object"}, "corrective reason", "pass", corrected_at=NOW,
+        )
+
+
+def test_only_authorized_targets_are_listed_and_four_targets_are_exactly_selectable(
+    conn: sqlite3.Connection,
+) -> None:
+    reviews = [_review_graph(conn, suffix=f"-{index}") for index in range(5)]
+    for review_id, result_id in reviews[:4]:
+        authorize_human_review_correction_target(
+            conn, review_id, result_id, "procedure-invalid review", authorized_at=NOW
+        )
+
+    rows = list_uncorrected_human_review_targets(conn)
+    assert [row["human_review_id"] for row in rows] == [review_id for review_id, _ in reviews[:4]]
+    assert reviews[4][0] not in [row["human_review_id"] for row in rows]
+
+
+def test_correction_authorization_requires_matching_evaluation_result(conn: sqlite3.Connection) -> None:
+    review_id, result_id = _review_graph(conn)
+    with pytest.raises(WorkflowError, match="evaluation_result_id"):
+        authorize_human_review_correction_target(
+            conn, review_id, result_id + 1, "procedure-invalid review", authorized_at=NOW
+        )

@@ -15,13 +15,16 @@ from eval_lab.application.prompts import WorkflowError
 from eval_lab.domain.review_corrections import (
     CORRECTIVE_RE_REVIEW,
     effective_final_decision,
+    validate_correction_target,
     validate_correction_payload,
 )
 from eval_lab.imports.human_reviews import parse_human_review_payload
 from eval_lab.repositories.sqlite import (
     get_human_review_correction_for_review,
+    get_human_review_correction_target_for_review,
     insert_human_review,
     insert_human_review_correction,
+    insert_human_review_correction_target,
 )
 
 
@@ -115,6 +118,53 @@ def record_human_review(
     return insert_human_review(conn, {"evaluation_result_id": evaluation_result_id, **validation["value"]})
 
 
+def authorize_human_review_correction_target(
+    conn: sqlite3.Connection,
+    original_human_review_id: int,
+    evaluation_result_id: int,
+    authorization_reason: str,
+    *,
+    authorized_at: str | None = None,
+) -> int:
+    """Append an explicit owner authorization before any corrective re-review."""
+    original = conn.execute(
+        """
+        SELECT id, evaluation_result_id
+        FROM human_reviews
+        WHERE id = ?
+        """,
+        (original_human_review_id,),
+    ).fetchone()
+    if original is None:
+        raise WorkflowError(f"human review {original_human_review_id} was not found")
+    if int(original["evaluation_result_id"]) != evaluation_result_id:
+        raise WorkflowError(
+            "correction target evaluation_result_id must match the original human review"
+        )
+    if get_human_review_correction_target_for_review(conn, original_human_review_id) is not None:
+        raise WorkflowError("human review correction target already exists")
+    timestamp = _utc_now() if authorized_at is None else authorized_at
+    try:
+        validate_correction_target(
+            authorization_reason=authorization_reason,
+            authorized_at=timestamp,
+        )
+    except ValueError as exc:
+        raise WorkflowError(str(exc)) from exc
+    try:
+        return insert_human_review_correction_target(
+            conn,
+            {
+                "original_human_review_id": original_human_review_id,
+                "evaluation_result_id": evaluation_result_id,
+                "authorization_reason": authorization_reason,
+                "authorized_at": timestamp,
+            },
+        )
+    except sqlite3.IntegrityError as exc:
+        raise WorkflowError("human review correction target could not be appended") from exc
+
+
 def record_human_review_correction(
     conn: sqlite3.Connection,
     original_human_review_id: int,
@@ -141,6 +191,13 @@ def record_human_review_correction(
     if int(original["evaluation_result_id"]) != evaluation_result_id:
         raise WorkflowError(
             "correction evaluation_result_id must match the original human review"
+        )
+    target = get_human_review_correction_target_for_review(conn, original_human_review_id)
+    if target is None:
+        raise WorkflowError("human review correction is not authorized")
+    if int(target["evaluation_result_id"]) != evaluation_result_id:
+        raise WorkflowError(
+            "correction target evaluation_result_id must match the original human review"
         )
     if get_human_review_correction_for_review(conn, original_human_review_id) is not None:
         raise WorkflowError("human review already has a correction")

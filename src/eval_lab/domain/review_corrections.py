@@ -8,6 +8,14 @@ CORRECTIVE_RE_REVIEW = "corrective-re-review"
 CORRECTED_FINAL_DECISIONS = frozenset({"pass", "fail", "indeterminate"})
 
 
+def validate_correction_target(*, authorization_reason: object, authorized_at: object) -> None:
+    """Validate the immutable owner authorization record for a correction target."""
+    if not isinstance(authorization_reason, str) or not authorization_reason.strip():
+        raise ValueError("authorization_reason must be a non-empty string")
+    if not isinstance(authorized_at, str) or not authorized_at.strip():
+        raise ValueError("authorized_at must be a non-empty string")
+
+
 def validate_correction_payload(
     *,
     correction_reason: object,

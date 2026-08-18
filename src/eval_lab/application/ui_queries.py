@@ -133,6 +133,8 @@ def list_uncorrected_human_review_targets(
         FROM human_reviews AS hr
         JOIN evaluation_results AS er ON er.id = hr.evaluation_result_id
         JOIN model_outputs AS mo ON mo.id = er.model_output_id
+        JOIN human_review_correction_targets AS hrt
+          ON hrt.original_human_review_id = hr.id
         LEFT JOIN human_review_corrections AS hrc
           ON hrc.original_human_review_id = hr.id
         WHERE hrc.id IS NULL

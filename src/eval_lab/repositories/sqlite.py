@@ -461,6 +461,36 @@ def insert_human_review_correction(
     )
 
 
+def insert_human_review_correction_target(
+    conn: sqlite3.Connection, data: Mapping[str, object]
+) -> int:
+    return _insert(
+        conn,
+        """
+        INSERT INTO human_review_correction_targets (
+            original_human_review_id, evaluation_result_id,
+            authorization_reason, authorized_at
+        ) VALUES (?, ?, ?, ?)
+        """,
+        (
+            data["original_human_review_id"], data["evaluation_result_id"],
+            data["authorization_reason"], data["authorized_at"],
+        ),
+    )
+
+
+def get_human_review_correction_target_for_review(
+    conn: sqlite3.Connection, original_human_review_id: int
+) -> sqlite3.Row | None:
+    return conn.execute(
+        """
+        SELECT * FROM human_review_correction_targets
+        WHERE original_human_review_id = ?
+        """,
+        (original_human_review_id,),
+    ).fetchone()
+
+
 def get_human_review_correction_for_review(
     conn: sqlite3.Connection, original_human_review_id: int
 ) -> sqlite3.Row | None:
