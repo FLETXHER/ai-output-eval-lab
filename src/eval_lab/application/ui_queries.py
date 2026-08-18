@@ -108,12 +108,45 @@ def get_decision_layer_comparison(
     conn: sqlite3.Connection, evaluation_result_id: int
 ) -> sqlite3.Row | None:
     return conn.execute(
-        """SELECT er.calculated_status, hr.final_decision
+        """SELECT
+            er.calculated_status,
+            hr.final_decision AS original_final_decision,
+            hrc.corrected_final_decision,
+            COALESCE(hrc.corrected_final_decision, hr.final_decision) AS effective_final_decision,
+            COALESCE(hrc.corrected_final_decision, hr.final_decision) AS final_decision
         FROM evaluation_results AS er
         JOIN human_reviews AS hr ON hr.evaluation_result_id = er.id
+        LEFT JOIN human_review_corrections AS hrc
+          ON hrc.original_human_review_id = hr.id
         WHERE er.id = ?""",
         (evaluation_result_id,),
     ).fetchone()
+
+
+def list_uncorrected_human_review_targets(
+    conn: sqlite3.Connection,
+) -> list[dict[str, object]]:
+    """Return candidate-only choices for the separate corrective-review UI path."""
+    rows = conn.execute(
+        """
+        SELECT hr.id AS human_review_id, hr.evaluation_result_id, mo.candidate_id
+        FROM human_reviews AS hr
+        JOIN evaluation_results AS er ON er.id = hr.evaluation_result_id
+        JOIN model_outputs AS mo ON mo.id = er.model_output_id
+        LEFT JOIN human_review_corrections AS hrc
+          ON hrc.original_human_review_id = hr.id
+        WHERE hrc.id IS NULL
+        ORDER BY hr.id
+        """
+    )
+    return [
+        {
+            "human_review_id": int(row["human_review_id"]),
+            "evaluation_result_id": int(row["evaluation_result_id"]),
+            "candidate_id": str(row["candidate_id"]),
+        }
+        for row in rows
+    ]
 
 
 def list_analysis_runs(conn: sqlite3.Connection) -> list[sqlite3.Row]:

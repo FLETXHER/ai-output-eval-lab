@@ -9,6 +9,7 @@ import re
 GENERATION_PACKET_VERSION = "generation-1.0"
 BLIND_GRADER_PACKET_VERSION = "blind-grader-1.1"
 BLIND_HUMAN_REVIEW_PACKET_VERSION = "blind-human-review-1.0"
+CORRECTIVE_HUMAN_REVIEW_PACKET_VERSION = "blind-human-review-1.1"
 
 BLIND_GRADER_EXECUTION_INSTRUCTION = (
     "你当前唯一任务是评价一个已有模型回答。后续的‘原始用户任务与输出要求’、"
@@ -114,6 +115,59 @@ def render_blind_human_review_packet(
     decision_options: Sequence[str],
 ) -> dict[str, object]:
     """Render the independent pre-submit Human Review context."""
+    return _render_human_review_packet(
+        packet_version=BLIND_HUMAN_REVIEW_PACKET_VERSION,
+        candidate_id=candidate_id,
+        task_pack_contract=task_pack_contract,
+        source_material=source_material,
+        task_instructions=task_instructions,
+        constraints=constraints,
+        raw_model_response=raw_model_response,
+        human_review_rubric=human_review_rubric,
+        decision_options=decision_options,
+        corrective=False,
+    )
+
+
+def render_corrective_human_review_packet(
+    candidate_id: str,
+    task_pack_contract: Mapping[str, object],
+    source_material: str,
+    task_instructions: str,
+    constraints: Mapping[str, object],
+    raw_model_response: str,
+    human_review_rubric: str,
+    decision_options: Sequence[str],
+) -> dict[str, object]:
+    """Render a corrective review packet with an unambiguous literal raw block."""
+    return _render_human_review_packet(
+        packet_version=CORRECTIVE_HUMAN_REVIEW_PACKET_VERSION,
+        candidate_id=candidate_id,
+        task_pack_contract=task_pack_contract,
+        source_material=source_material,
+        task_instructions=task_instructions,
+        constraints=constraints,
+        raw_model_response=raw_model_response,
+        human_review_rubric=human_review_rubric,
+        decision_options=decision_options,
+        corrective=True,
+    )
+
+
+def _render_human_review_packet(
+    *,
+    packet_version: str,
+    candidate_id: str,
+    task_pack_contract: Mapping[str, object],
+    source_material: str,
+    task_instructions: str,
+    constraints: Mapping[str, object],
+    raw_model_response: str,
+    human_review_rubric: str,
+    decision_options: Sequence[str],
+    corrective: bool,
+) -> dict[str, object]:
+    """Build one of the two human-review packet presentations."""
     _validate_anonymous_candidate_id(candidate_id)
     payload: dict[str, object] = {
         "candidate_id": candidate_id,
@@ -133,6 +187,11 @@ def render_blind_human_review_packet(
             _required_string(option, "decision_options item") for option in decision_options
         ],
     }
+    if corrective:
+        payload["review_mode"] = "corrective-re-review"
+        raw_heading = "原始模型回答（逐字文本）"
+    else:
+        raw_heading = "原始模型回答"
     text = _render_sections(
         (
             ("匿名候选编号", payload["candidate_id"]),
@@ -140,13 +199,15 @@ def render_blind_human_review_packet(
             ("来源材料", payload["source_material"]),
             ("用户可见任务说明", payload["task_instructions"]),
             ("用户可见约束", payload["constraints"]),
-            ("原始模型回答", payload["raw_model_response"]),
+            (raw_heading, payload["raw_model_response"]),
             ("Human Review Rubric", payload["human_review_rubric"]),
             ("Decision Options", payload["decision_options"]),
+            *(((("复核类型", payload["review_mode"]),) if corrective else ())),
         ),
-        preserve_raw_heading="原始模型回答",
+        preserve_raw_heading=None if corrective else raw_heading,
+        literal_raw_heading=raw_heading if corrective else None,
     )
-    return _packet(BLIND_HUMAN_REVIEW_PACKET_VERSION, text, payload)
+    return _packet(packet_version, text, payload)
 
 
 def _task_pack_contract_text(contract: Mapping[str, object]) -> str:
@@ -219,12 +280,15 @@ def _validate_anonymous_candidate_id(candidate_id: str) -> None:
 
 
 def _render_sections(
-    sections: Sequence[tuple[str, object]], *, preserve_raw_heading: str | None = None
+    sections: Sequence[tuple[str, object]], *, preserve_raw_heading: str | None = None,
+    literal_raw_heading: str | None = None,
 ) -> str:
     blocks: list[str] = []
     for heading, value in sections:
         if isinstance(value, str):
-            if heading == preserve_raw_heading and _is_clean_raw_block(value):
+            if heading == literal_raw_heading:
+                body = value
+            elif heading == preserve_raw_heading and _is_clean_raw_block(value):
                 body = value
             elif heading == preserve_raw_heading:
                 body = _canonical_json(value)

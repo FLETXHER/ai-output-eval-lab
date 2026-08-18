@@ -7,10 +7,22 @@ import json
 import math
 import sqlite3
 
-from eval_lab.application.packets import build_blind_human_review_packet
+from eval_lab.application.packets import (
+    build_blind_human_review_packet,
+    build_corrective_human_review_packet,
+)
 from eval_lab.application.prompts import WorkflowError
+from eval_lab.domain.review_corrections import (
+    CORRECTIVE_RE_REVIEW,
+    effective_final_decision,
+    validate_correction_payload,
+)
 from eval_lab.imports.human_reviews import parse_human_review_payload
-from eval_lab.repositories.sqlite import insert_human_review
+from eval_lab.repositories.sqlite import (
+    get_human_review_correction_for_review,
+    insert_human_review,
+    insert_human_review_correction,
+)
 
 
 def build_blind_human_review_packet_for_result(
@@ -18,6 +30,13 @@ def build_blind_human_review_packet_for_result(
 ) -> dict[str, object]:
     """Build the independent pre-submission packet with no automatic evidence."""
     return build_blind_human_review_packet(conn, evaluation_result_id)
+
+
+def build_corrective_human_review_packet_for_result(
+    conn: sqlite3.Connection, evaluation_result_id: int
+) -> dict[str, object]:
+    """Build the separate corrective review packet with a literal raw-response block."""
+    return build_corrective_human_review_packet(conn, evaluation_result_id)
 
 
 def select_predeclared_review_sample(
@@ -94,6 +113,88 @@ def record_human_review(
     if not validation["ok"] or validation["value"] is None:
         raise WorkflowError("invalid human review payload: " + "; ".join(validation["errors"]))
     return insert_human_review(conn, {"evaluation_result_id": evaluation_result_id, **validation["value"]})
+
+
+def record_human_review_correction(
+    conn: sqlite3.Connection,
+    original_human_review_id: int,
+    evaluation_result_id: int,
+    correction_reason: str,
+    reviewer_evidence: object,
+    reviewer_reason: str,
+    corrected_final_decision: str,
+    *,
+    corrected_at: str | None = None,
+    review_mode: str = CORRECTIVE_RE_REVIEW,
+) -> int:
+    """Append one corrective re-review without changing the original review."""
+    original = conn.execute(
+        """
+        SELECT id, evaluation_result_id
+        FROM human_reviews
+        WHERE id = ?
+        """,
+        (original_human_review_id,),
+    ).fetchone()
+    if original is None:
+        raise WorkflowError(f"human review {original_human_review_id} was not found")
+    if int(original["evaluation_result_id"]) != evaluation_result_id:
+        raise WorkflowError(
+            "correction evaluation_result_id must match the original human review"
+        )
+    if get_human_review_correction_for_review(conn, original_human_review_id) is not None:
+        raise WorkflowError("human review already has a correction")
+    try:
+        validate_correction_payload(
+            correction_reason=correction_reason,
+            reviewer_evidence=reviewer_evidence,
+            reviewer_reason=reviewer_reason,
+            corrected_final_decision=corrected_final_decision,
+            review_mode=review_mode,
+        )
+    except ValueError as exc:
+        raise WorkflowError(str(exc)) from exc
+    timestamp = _utc_now() if corrected_at is None else corrected_at
+    if not isinstance(timestamp, str) or not timestamp.strip():
+        raise WorkflowError("corrected_at must be a non-empty string")
+    try:
+        return insert_human_review_correction(
+            conn,
+            {
+                "original_human_review_id": original_human_review_id,
+                "evaluation_result_id": evaluation_result_id,
+                "review_mode": review_mode,
+                "correction_reason": correction_reason,
+                "reviewer_evidence": reviewer_evidence,
+                "reviewer_reason": reviewer_reason,
+                "corrected_final_decision": corrected_final_decision,
+                "corrected_at": timestamp,
+            },
+        )
+    except sqlite3.IntegrityError as exc:
+        raise WorkflowError("human review correction could not be appended") from exc
+
+
+def effective_human_review_decision(
+    conn: sqlite3.Connection, evaluation_result_id: int
+) -> str | None:
+    """Read the effective human layer while retaining original/correction rows."""
+    row = conn.execute(
+        """
+        SELECT hr.final_decision AS original_final_decision,
+               hrc.corrected_final_decision
+        FROM human_reviews AS hr
+        LEFT JOIN human_review_corrections AS hrc
+          ON hrc.original_human_review_id = hr.id
+        WHERE hr.evaluation_result_id = ?
+        """,
+        (evaluation_result_id,),
+    ).fetchone()
+    if row is None:
+        raise WorkflowError(f"human review for evaluation result {evaluation_result_id} was not found")
+    return effective_final_decision(
+        row["original_final_decision"], row["corrected_final_decision"]
+    )
 
 
 def _evaluation_rows(

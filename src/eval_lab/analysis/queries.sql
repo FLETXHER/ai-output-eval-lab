@@ -22,19 +22,52 @@ LEFT JOIN evaluation_results AS ev ON ev.model_output_id = mo.id
 WHERE mo.evaluation_run_id = ?;
 
 -- name: status_distribution
-SELECT 'calculated_status' AS decision_layer, ev.calculated_status AS status, COUNT(*) AS count
+WITH review_layers AS (
+    SELECT
+        ev.calculated_status,
+        hr.final_decision AS original_final_decision,
+        hrc.corrected_final_decision,
+        COALESCE(hrc.corrected_final_decision, hr.final_decision) AS effective_final_decision
+    FROM evaluation_results AS ev
+    JOIN model_outputs AS mo ON mo.id = ev.model_output_id
+    LEFT JOIN human_reviews AS hr ON hr.evaluation_result_id = ev.id
+    LEFT JOIN human_review_corrections AS hrc ON hrc.original_human_review_id = hr.id
+    WHERE mo.evaluation_run_id = ?
+)
+SELECT 'calculated_status' AS decision_layer, calculated_status AS status, COUNT(*) AS count
+FROM review_layers
+GROUP BY calculated_status
+UNION ALL
+SELECT 'original_final_decision', original_final_decision, COUNT(*)
+FROM review_layers
+WHERE original_final_decision IS NOT NULL
+GROUP BY original_final_decision
+UNION ALL
+SELECT 'corrected_final_decision', corrected_final_decision, COUNT(*)
+FROM review_layers
+WHERE corrected_final_decision IS NOT NULL
+GROUP BY corrected_final_decision
+UNION ALL
+SELECT 'effective_final_decision', effective_final_decision, COUNT(*)
+FROM review_layers
+WHERE effective_final_decision IS NOT NULL
+GROUP BY effective_final_decision
+ORDER BY decision_layer, status;
+
+-- name: decision_layers
+SELECT
+    ev.id AS evaluation_result_id,
+    mo.candidate_id,
+    ev.calculated_status,
+    hr.final_decision AS original_final_decision,
+    hrc.corrected_final_decision,
+    COALESCE(hrc.corrected_final_decision, hr.final_decision) AS effective_final_decision
 FROM evaluation_results AS ev
 JOIN model_outputs AS mo ON mo.id = ev.model_output_id
+LEFT JOIN human_reviews AS hr ON hr.evaluation_result_id = ev.id
+LEFT JOIN human_review_corrections AS hrc ON hrc.original_human_review_id = hr.id
 WHERE mo.evaluation_run_id = ?
-GROUP BY ev.calculated_status
-UNION ALL
-SELECT 'final_decision' AS decision_layer, hr.final_decision AS status, COUNT(*) AS count
-FROM human_reviews AS hr
-JOIN evaluation_results AS ev ON ev.id = hr.evaluation_result_id
-JOIN model_outputs AS mo ON mo.id = ev.model_output_id
-WHERE mo.evaluation_run_id = ? AND hr.final_decision IS NOT NULL
-GROUP BY hr.final_decision
-ORDER BY decision_layer, status;
+ORDER BY ev.id;
 
 -- name: paired_comparison
 WITH case_ids AS (
@@ -42,24 +75,42 @@ WITH case_ids AS (
     UNION
     SELECT test_case_id FROM model_outputs WHERE evaluation_run_id = ?
 ), left_results AS (
-    SELECT mo.test_case_id, ev.calculated_status, hr.final_decision
+    SELECT
+        mo.test_case_id,
+        ev.calculated_status,
+        hr.final_decision AS original_final_decision,
+        hrc.corrected_final_decision,
+        COALESCE(hrc.corrected_final_decision, hr.final_decision) AS effective_final_decision
     FROM model_outputs AS mo
     LEFT JOIN evaluation_results AS ev ON ev.model_output_id = mo.id
     LEFT JOIN human_reviews AS hr ON hr.evaluation_result_id = ev.id
+    LEFT JOIN human_review_corrections AS hrc ON hrc.original_human_review_id = hr.id
     WHERE mo.evaluation_run_id = ?
 ), right_results AS (
-    SELECT mo.test_case_id, ev.calculated_status, hr.final_decision
+    SELECT
+        mo.test_case_id,
+        ev.calculated_status,
+        hr.final_decision AS original_final_decision,
+        hrc.corrected_final_decision,
+        COALESCE(hrc.corrected_final_decision, hr.final_decision) AS effective_final_decision
     FROM model_outputs AS mo
     LEFT JOIN evaluation_results AS ev ON ev.model_output_id = mo.id
     LEFT JOIN human_reviews AS hr ON hr.evaluation_result_id = ev.id
+    LEFT JOIN human_review_corrections AS hrc ON hrc.original_human_review_id = hr.id
     WHERE mo.evaluation_run_id = ?
 )
 SELECT
     case_ids.test_case_id,
     left_results.calculated_status AS left_calculated_status,
     right_results.calculated_status AS right_calculated_status,
-    left_results.final_decision AS left_final_decision,
-    right_results.final_decision AS right_final_decision
+    left_results.original_final_decision AS left_original_final_decision,
+    left_results.corrected_final_decision AS left_corrected_final_decision,
+    left_results.effective_final_decision AS left_effective_final_decision,
+    left_results.effective_final_decision AS left_final_decision,
+    right_results.original_final_decision AS right_original_final_decision,
+    right_results.corrected_final_decision AS right_corrected_final_decision,
+    right_results.effective_final_decision AS right_effective_final_decision,
+    right_results.effective_final_decision AS right_final_decision
 FROM case_ids
 LEFT JOIN left_results ON left_results.test_case_id = case_ids.test_case_id
 LEFT JOIN right_results ON right_results.test_case_id = case_ids.test_case_id
@@ -104,11 +155,15 @@ SELECT
     mo.id AS model_output_id,
     mo.candidate_id,
     ev.calculated_status,
-    hr.final_decision,
+    hr.final_decision AS original_final_decision,
+    hrc.corrected_final_decision,
+    COALESCE(hrc.corrected_final_decision, hr.final_decision) AS effective_final_decision,
+    COALESCE(hrc.corrected_final_decision, hr.final_decision) AS final_decision,
     gr.primary_error_type
 FROM model_outputs AS mo
 JOIN evaluation_results AS ev ON ev.model_output_id = mo.id
 LEFT JOIN human_reviews AS hr ON hr.evaluation_result_id = ev.id
+LEFT JOIN human_review_corrections AS hrc ON hrc.original_human_review_id = hr.id
 LEFT JOIN grader_results AS gr ON gr.id = ev.grader_result_id
 WHERE mo.evaluation_run_id = ? AND ev.calculated_status <> 'pass'
 ORDER BY mo.id;

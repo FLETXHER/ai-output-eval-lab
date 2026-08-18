@@ -16,6 +16,7 @@ from eval_lab.repositories.sqlite import (
     connect,
     initialize_database,
     insert_grader_condition,
+    insert_human_review,
     insert_task_pack,
     insert_test_case,
 )
@@ -483,6 +484,41 @@ def test_blind_human_review_hides_automatic_evidence_until_submission_then_shows
     assert review["review_scope"] == "required"
     assert review["final_decision"] == "pass"
     conn.close()
+
+
+def test_corrective_human_review_path_displays_literal_raw_response_without_auto_outcomes(
+    temporary_db_path, repo_root
+) -> None:
+    ids = _seed(temporary_db_path, repo_root)
+    result_id = _store_indeterminate_result(temporary_db_path, repo_root, ids)
+    conn = connect(temporary_db_path)
+    conn.execute(
+        "UPDATE model_outputs SET raw_response = raw_response || char(10) WHERE id = (SELECT model_output_id FROM evaluation_results WHERE id = ?)",
+        (result_id,),
+    )
+    conn.commit()
+    insert_human_review(
+        conn,
+        {
+            "evaluation_result_id": result_id,
+            "review_scope": "required",
+            "blind_review": True,
+            "evidence": {"original": "display was misleading"},
+            "reason": "original procedure-invalid review",
+            "final_decision": "fail",
+            "reviewed_at": NOW,
+        },
+    )
+    conn.close()
+
+    page = _page_test("pages.evaluation", str(temporary_db_path), str(repo_root))
+    page.radio[0].set_value("纠正性人工复核（corrective-re-review）").run()
+    assert not page.exception
+    packet_text = page.code[0].value
+    assert "## 原始模型回答（逐字文本）\n{" in packet_text
+    assert '\"{\\\"title\\\"' not in packet_text
+    for forbidden in ("calculated_status", "grader_result", "UI-COMP-01"):
+        assert forbidden not in packet_text
 
 
 def test_blind_human_review_batch_selector_does_not_expose_comparison_group_ids(

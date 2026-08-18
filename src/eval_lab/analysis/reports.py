@@ -25,6 +25,7 @@ _PAIR_CONDITION_KEYS = (
 _RUN_SCOPED_QUERY_NAMES = frozenset({
     "run_summary",
     "status_distribution",
+    "decision_layers",
     "rule_failures",
     "required_fact_failures",
     "unsupported_claims",
@@ -140,7 +141,12 @@ def run_summary(conn: sqlite3.Connection, run_id: int) -> pd.DataFrame:
 
 
 def status_distribution(conn: sqlite3.Connection, run_id: int) -> pd.DataFrame:
-    return run_query(conn, "status_distribution", (run_id, run_id))
+    return run_query(conn, "status_distribution", (run_id,))
+
+
+def decision_layers(conn: sqlite3.Connection, run_id: int) -> pd.DataFrame:
+    """Show automatic, original human, corrected human, and effective layers."""
+    return run_query(conn, "decision_layers", (run_id,))
 
 
 def _comparable_runs(conn: sqlite3.Connection, comparison_group_id: str) -> list[sqlite3.Row]:

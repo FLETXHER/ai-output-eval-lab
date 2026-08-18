@@ -5,9 +5,11 @@ import json
 import sqlite3
 
 from eval_lab.domain.packets import (
+    CORRECTIVE_HUMAN_REVIEW_PACKET_VERSION,
     HUMAN_REVIEW_DECISION_OPTIONS,
     HUMAN_REVIEW_RUBRIC,
     render_blind_grader_packet,
+    render_corrective_human_review_packet,
     render_blind_human_review_packet,
     render_generation_packet,
 )
@@ -200,6 +202,61 @@ def build_blind_human_review_packet(
         human_review_rubric=HUMAN_REVIEW_RUBRIC,
         decision_options=HUMAN_REVIEW_DECISION_OPTIONS,
     )
+
+
+def build_corrective_human_review_packet(
+    conn: sqlite3.Connection, evaluation_result_id: int
+) -> dict[str, object]:
+    """Build a corrective packet for an existing review without exposing auto outcomes."""
+    row = conn.execute(
+        """
+        SELECT
+            mo.candidate_id,
+            mo.raw_response,
+            tc.source_material,
+            tc.task_notes,
+            tc.explicit_forbidden_claims_json,
+            tp.pack_key,
+            tp.contract_version,
+            tp.language,
+            tp.title_min_chars,
+            tp.title_max_chars,
+            tp.summary_min_chars,
+            tp.summary_max_chars,
+            tp.key_points_count,
+            tp.key_point_min_chars,
+            tp.key_point_max_chars
+        FROM evaluation_results AS er
+        JOIN human_reviews AS hr ON hr.evaluation_result_id = er.id
+        JOIN model_outputs AS mo ON mo.id = er.model_output_id
+        JOIN test_cases AS tc ON tc.id = mo.test_case_id
+        JOIN task_packs AS tp ON tp.id = tc.task_pack_id
+        LEFT JOIN human_review_corrections AS hrc
+          ON hrc.original_human_review_id = hr.id
+        WHERE er.id = ? AND hrc.id IS NULL
+        """,
+        (evaluation_result_id,),
+    ).fetchone()
+    if row is None:
+        raise LookupError(
+            "uncorrected Human Review packet context was not found"
+        )
+    if row["raw_response"] is None:
+        raise ValueError("cannot build a corrective packet without a model response")
+
+    packet = render_corrective_human_review_packet(
+        candidate_id=row["candidate_id"],
+        task_pack_contract=_contract_from_row(row),
+        source_material=row["source_material"],
+        task_instructions=row["task_notes"],
+        constraints=_case_constraints(row, include_task_instructions=False),
+        raw_model_response=row["raw_response"],
+        human_review_rubric=HUMAN_REVIEW_RUBRIC,
+        decision_options=HUMAN_REVIEW_DECISION_OPTIONS,
+    )
+    if packet["packet_version"] != CORRECTIVE_HUMAN_REVIEW_PACKET_VERSION:
+        raise ValueError("corrective packet version is inconsistent")
+    return packet
 
 
 def _contract_from_row(row: Mapping[str, object]) -> dict[str, object]:

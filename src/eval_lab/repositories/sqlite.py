@@ -12,6 +12,10 @@ class SchemaInitializationError(RuntimeError):
     """Raised when schema initialization cannot complete atomically."""
 
 
+class SchemaMigrationError(RuntimeError):
+    """Raised when a schema migration cannot complete atomically."""
+
+
 def connect(db_path: str | Path) -> sqlite3.Connection:
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
@@ -44,6 +48,17 @@ def initialize_database(conn: sqlite3.Connection, schema_path: str | Path) -> No
         if conn.in_transaction:
             conn.execute("ROLLBACK")
         raise SchemaInitializationError("database schema initialization failed") from exc
+
+
+def apply_migration(conn: sqlite3.Connection, migration_path: str | Path) -> None:
+    """Apply one SQL migration as one transaction, or leave no partial changes."""
+    try:
+        migration_sql = Path(migration_path).read_text(encoding="utf-8")
+        with transaction(conn):
+            for statement in _complete_statements(migration_sql):
+                conn.execute(statement)
+    except (OSError, sqlite3.Error, ValueError) as exc:
+        raise SchemaMigrationError("database schema migration failed") from exc
 
 
 @contextmanager
@@ -422,6 +437,50 @@ def insert_human_review(conn: sqlite3.Connection, data: Mapping[str, object]) ->
             _json(data["evidence"]), data["reason"], data.get("final_decision"),
             data["reviewed_at"],
         ),
+    )
+
+
+def insert_human_review_correction(
+    conn: sqlite3.Connection, data: Mapping[str, object]
+) -> int:
+    return _insert(
+        conn,
+        """
+        INSERT INTO human_review_corrections (
+            original_human_review_id, evaluation_result_id, review_mode,
+            correction_reason, reviewer_evidence_json, reviewer_reason,
+            corrected_final_decision, corrected_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            data["original_human_review_id"], data["evaluation_result_id"],
+            data["review_mode"], data["correction_reason"],
+            _json(data["reviewer_evidence"]), data["reviewer_reason"],
+            data["corrected_final_decision"], data["corrected_at"],
+        ),
+    )
+
+
+def get_human_review_correction_for_review(
+    conn: sqlite3.Connection, original_human_review_id: int
+) -> sqlite3.Row | None:
+    return conn.execute(
+        """
+        SELECT * FROM human_review_corrections
+        WHERE original_human_review_id = ?
+        """,
+        (original_human_review_id,),
+    ).fetchone()
+
+
+def list_human_review_corrections(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    return list(
+        conn.execute(
+            """
+            SELECT * FROM human_review_corrections
+            ORDER BY id
+            """
+        )
     )
 
 

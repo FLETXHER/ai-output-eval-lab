@@ -5,6 +5,8 @@ import pytest
 
 from eval_lab.repositories.sqlite import (
     SchemaInitializationError,
+    SchemaMigrationError,
+    apply_migration,
     connect,
     initialize_database,
     table_names,
@@ -24,6 +26,7 @@ APPROVED_TABLES = {
     "grader_fact_results",
     "evaluation_results",
     "human_reviews",
+    "human_review_corrections",
 }
 
 
@@ -127,5 +130,48 @@ def test_broken_schema_rolls_back_all_previously_created_tables(
             initialize_database(conn, broken_schema_path)
 
         assert table_names(conn) == set()
+    finally:
+        conn.close()
+
+
+def test_migration_rolls_back_partial_changes_on_failure(
+    temporary_db_path: Path, tmp_path: Path
+) -> None:
+    conn = connect(temporary_db_path)
+    initialize_database(conn, Path(__file__).resolve().parents[2] / "db" / "schema.sql")
+    migration_path = tmp_path / "broken_migration.sql"
+    migration_path.write_text(
+        "CREATE TABLE migration_partial (id INTEGER PRIMARY KEY);\n"
+        "CREATE TABLE migration_broken (\n",
+        encoding="utf-8",
+    )
+    try:
+        with pytest.raises(SchemaMigrationError):
+            apply_migration(conn, migration_path)
+        assert "migration_partial" not in table_names(conn)
+    finally:
+        conn.close()
+
+
+def test_human_review_correction_migration_is_atomic_and_idempotent(
+    temporary_db_path: Path, repo_root: Path, tmp_path: Path
+) -> None:
+    full_schema = (repo_root / "db" / "schema.sql").read_text(encoding="utf-8")
+    legacy_schema_path = tmp_path / "legacy_schema.sql"
+    legacy_schema_path.write_text(
+        full_schema.split("CREATE TABLE human_review_corrections", 1)[0].rstrip() + "\n",
+        encoding="utf-8",
+    )
+    conn = connect(temporary_db_path)
+    try:
+        initialize_database(conn, legacy_schema_path)
+        assert "human_review_corrections" not in table_names(conn)
+        migration = repo_root / "db" / "migrations" / "001_human_review_corrections.sql"
+        apply_migration(conn, migration)
+        apply_migration(conn, migration)
+        assert "human_review_corrections" in table_names(conn)
+        assert conn.execute(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'human_review_corrections_%'"
+        ).fetchone()[0] == 3
     finally:
         conn.close()

@@ -42,7 +42,9 @@ def render(conn: sqlite3.Connection) -> None:
     )
     st.dataframe(summary, hide_index=True)
 
-    st.markdown("### calculated_status 与 final_decision")
+    st.markdown(
+        "### calculated_status、original_final_decision、corrected_final_decision 与 effective_final_decision"
+    )
     st.dataframe(statuses, hide_index=True)
     st.markdown("### 人工复核覆盖率")
     st.dataframe(coverage, hide_index=True)

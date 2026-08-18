@@ -6,6 +6,7 @@ import sqlite3
 import pytest
 
 from eval_lab.analysis.reports import (
+    decision_layers,
     failure_breakdown,
     load_query,
     paired_comparison,
@@ -14,6 +15,7 @@ from eval_lab.analysis.reports import (
     run_summary,
     status_distribution,
 )
+from eval_lab.application.reviews import record_human_review_correction
 from eval_lab.repositories.sqlite import (
     connect,
     initialize_database,
@@ -32,6 +34,13 @@ from eval_lab.repositories.sqlite import (
 
 
 NOW = "2026-08-13T00:00:00Z"
+CORRECTION_REASON = (
+    "Original blind Human Review was procedure-invalid because JSON-string encoding used by the "
+    "review packet renderer for a raw response with a trailing newline was misinterpreted as "
+    "evidence that the stored raw response itself had a JSON string root. Read-only audit "
+    "confirmed the stored raw response parses as a JSON object and deterministic JSON/schema "
+    "checks pass."
+)
 
 
 @pytest.fixture
@@ -168,7 +177,7 @@ def analysis_data(initialized_connection: sqlite3.Connection) -> dict[str, int]:
 
 def test_named_queries_are_loadable_and_parameterized(analysis_data) -> None:
     for name in (
-        "run_summary", "status_distribution", "paired_comparison", "rule_failures",
+        "run_summary", "status_distribution", "decision_layers", "paired_comparison", "rule_failures",
         "required_fact_failures", "unsupported_claims", "error_types", "bad_cases", "review_coverage",
     ):
         assert "?" in load_query(name)
@@ -191,8 +200,10 @@ def test_run_summary_status_distribution_and_failure_breakdown_are_descriptive_a
     assert distribution.to_dict("records") == [
         {"decision_layer": "calculated_status", "status": "indeterminate", "count": 1},
         {"decision_layer": "calculated_status", "status": "pass", "count": 1},
-        {"decision_layer": "final_decision", "status": "indeterminate", "count": 1},
-        {"decision_layer": "final_decision", "status": "pass", "count": 1},
+        {"decision_layer": "effective_final_decision", "status": "indeterminate", "count": 1},
+        {"decision_layer": "effective_final_decision", "status": "pass", "count": 1},
+        {"decision_layer": "original_final_decision", "status": "indeterminate", "count": 1},
+        {"decision_layer": "original_final_decision", "status": "pass", "count": 1},
     ]
     assert breakdown["rule_failures"].to_dict("records") == [{"rule_key": "summary_length", "count": 1}]
     assert breakdown["required_fact_failures"].to_dict("records") == [{"fact_id": "F01", "status": "not_met", "count": 1}]
@@ -210,7 +221,10 @@ def test_paired_comparison_and_review_coverage_keep_status_layers_separate_and_r
     coverage = review_coverage(initialized_connection, "DEV-COMP-01")
     assert paired.columns.tolist() == [
         "test_case_id", "left_prompt_version", "right_prompt_version", "left_calculated_status",
-        "right_calculated_status", "left_final_decision", "right_final_decision", "comparison",
+        "right_calculated_status", "left_original_final_decision", "left_corrected_final_decision",
+        "left_effective_final_decision", "left_final_decision", "right_original_final_decision",
+        "right_corrected_final_decision", "right_effective_final_decision", "right_final_decision",
+        "comparison",
     ]
     assert paired["test_case_id"].tolist() == [1, 2, 3]
     assert paired["left_calculated_status"].iloc[:2].tolist() == ["pass", "indeterminate"]
@@ -235,7 +249,12 @@ def test_paired_comparison_rejects_mismatched_conditions_and_run_query_is_read_o
     with pytest.raises(ValueError, match="comparable"):
         paired_comparison(initialized_connection, "DEV-COMP-01")
     table = run_query(initialized_connection, "bad_cases", (analysis_data["run_v1"],))
-    assert table.to_dict("records") == [{"model_output_id": 2, "candidate_id": "candidate-a1b2c4", "calculated_status": "indeterminate", "final_decision": "indeterminate", "primary_error_type": "ambiguous_source"}]
+    assert table.to_dict("records") == [{
+        "model_output_id": 2, "candidate_id": "candidate-a1b2c4",
+        "calculated_status": "indeterminate", "original_final_decision": "indeterminate",
+        "corrected_final_decision": None, "effective_final_decision": "indeterminate",
+        "final_decision": "indeterminate", "primary_error_type": "ambiguous_source",
+    }]
     assert _database_state(initialized_connection) == before
 
 
@@ -284,3 +303,31 @@ def test_direct_paired_query_requires_one_shared_condition_per_run(
         )
 
     assert _database_state(conn) == before
+
+
+def test_analysis_exposes_original_corrected_and_effective_decisions_without_changing_calculated_status(
+    initialized_connection: sqlite3.Connection, analysis_data: dict[str, int]
+) -> None:
+    conn = initialized_connection
+    result_id = int(conn.execute(
+        "SELECT id FROM evaluation_results WHERE model_output_id = (SELECT id FROM model_outputs WHERE evaluation_run_id = ? ORDER BY id LIMIT 1)",
+        (analysis_data["run_v1"],),
+    ).fetchone()[0])
+    review_id = int(conn.execute(
+        "SELECT id FROM human_reviews WHERE evaluation_result_id = ?", (result_id,)
+    ).fetchone()[0])
+    record_human_review_correction(
+        conn, review_id, result_id, CORRECTION_REASON,
+        {"raw_root": "object"}, "Corrective evidence", "pass", corrected_at=NOW
+    )
+
+    layers = decision_layers(conn, analysis_data["run_v1"])
+    corrected = layers.loc[layers["evaluation_result_id"] == result_id].iloc[0]
+    assert corrected["calculated_status"] == "pass"
+    assert corrected["original_final_decision"] == "pass"
+    assert corrected["corrected_final_decision"] == "pass"
+    assert corrected["effective_final_decision"] == "pass"
+
+    paired = paired_comparison(conn, "DEV-COMP-01")
+    assert {"left_original_final_decision", "left_corrected_final_decision", "left_effective_final_decision"}.issubset(paired.columns)
+    assert {"right_original_final_decision", "right_corrected_final_decision", "right_effective_final_decision"}.issubset(paired.columns)

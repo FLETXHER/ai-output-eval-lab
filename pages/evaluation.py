@@ -12,6 +12,8 @@ from eval_lab.application.grading import (
 from eval_lab.application.prompts import WorkflowError
 from eval_lab.application.reviews import (
     build_blind_human_review_packet_for_result,
+    build_corrective_human_review_packet_for_result,
+    record_human_review_correction,
     record_human_review,
 )
 from eval_lab.application.ui_queries import (
@@ -21,17 +23,23 @@ from eval_lab.application.ui_queries import (
     list_grader_condition_ids,
     list_required_unreviewed_evaluation_results,
     list_review_comparison_groups,
+    list_uncorrected_human_review_targets,
 )
 from eval_lab.ui.components import show_validation_errors
 
 
 def render(conn: sqlite3.Connection) -> None:
     st.title("评测")
-    mode = st.radio("评测模式", ["盲化 Grader 导入", "盲化人工复核"])
+    mode = st.radio(
+        "评测模式",
+        ["盲化 Grader 导入", "盲化人工复核", "纠正性人工复核（corrective-re-review）"],
+    )
     if mode == "盲化 Grader 导入":
         _render_blind_grader_import(conn)
-    else:
+    elif mode == "盲化人工复核":
         _render_blind_human_review(conn)
+    else:
+        _render_corrective_human_review(conn)
 
 
 def _render_blind_grader_import(conn: sqlite3.Connection) -> None:
@@ -153,4 +161,64 @@ def _render_post_submission_comparison(conn: sqlite3.Connection, evaluation_resu
         return
     st.markdown("### 提交后的判定层")
     st.caption(f"calculated_status（自动计算）：{row['calculated_status']}")
+    st.caption(f"original_final_decision（原始人工裁决）：{row['original_final_decision']}")
+    st.caption(f"corrected_final_decision（纠正后裁决）：{row['corrected_final_decision']}")
+    st.caption(f"effective_final_decision（当前有效裁决）：{row['effective_final_decision']}")
     st.caption(f"final_decision（人工最终裁决）：{row['final_decision']}")
+
+
+def _render_corrective_human_review(conn: sqlite3.Connection) -> None:
+    """Provide a separate append-only corrective re-review path."""
+    try:
+        targets = list_uncorrected_human_review_targets(conn)
+    except sqlite3.OperationalError:
+        st.info("纠正性复核迁移尚未应用；请先按迁移说明准备数据库。")
+        return
+    if not targets:
+        st.info("暂无可进行纠正性复核的原始人工复核。")
+        return
+    by_id = {int(row["evaluation_result_id"]): row for row in targets}
+    result_id = st.selectbox(
+        "纠正性复核的匿名候选",
+        list(by_id),
+        format_func=lambda value: str(by_id[value]["candidate_id"]),
+    )
+    try:
+        packet = build_corrective_human_review_packet_for_result(conn, result_id)
+    except (LookupError, ValueError) as error:
+        show_validation_errors([str(error)])
+        return
+    st.subheader("纠正性复核任务包（原始回答逐字展示）")
+    st.caption("此路径属于 corrective re-review，不覆盖原始人工复核。")
+    st.code(str(packet["text"]), language="text")
+    with st.form("submit_corrective_human_review"):
+        final_decision = st.selectbox(
+            "纠正后人工裁决",
+            ["pass", "fail", "indeterminate"],
+            format_func={
+                "pass": "通过（pass）",
+                "fail": "失败（fail）",
+                "indeterminate": "无法确定（indeterminate）",
+            }.get,
+        )
+        evidence = st.text_area("纠正复核证据")
+        reason = st.text_area("纠正复核原因")
+        correction_reason = st.text_area("纠正原因（为何原 review 无效）")
+        submitted = st.form_submit_button("追加纠正性复核")
+    if not submitted:
+        return
+    try:
+        record_human_review_correction(
+            conn,
+            int(by_id[result_id]["human_review_id"]),
+            result_id,
+            correction_reason,
+            evidence,
+            reason,
+            final_decision,
+        )
+    except (WorkflowError, LookupError, ValueError) as error:
+        show_validation_errors([str(error)])
+        return
+    st.success("已追加纠正性复核；原始人工复核和自动结果均保持不变。")
+    _render_post_submission_comparison(conn, result_id)
