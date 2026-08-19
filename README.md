@@ -264,6 +264,8 @@ python -m compileall -q src pages tests
 
 - [Methodology and data boundary](docs/methodology.md)
 - [Final experiment report](docs/final_report.md)
+- [Retrospective / As-built PRD](docs/product_requirements.md)
+- [Project retrospective & Skill provenance](docs/project_retrospective.md)
 - [Design specification](docs/superpowers/specs/2026-08-13-ai-output-eval-lab-design.md)
 - [Implementation plan](docs/superpowers/plans/2026-08-13-ai-output-eval-lab-implementation-plan.md)
 
