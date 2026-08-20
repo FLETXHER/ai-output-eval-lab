@@ -36,6 +36,52 @@ automatic evaluation 与 Human Review 分层；provenance 全程保留；历史�
 这是个人 LLM Evaluation / AI 产品分析项目，不是 production A/B test、industry
 benchmark、统计验证或 fully automated model-API evaluation platform。
 
+### 系统与评测流程 / Architecture & Evaluation Flow
+
+```mermaid
+flowchart LR
+    subgraph lifecycle["Evaluation lifecycle"]
+        A["Formal Case Set"] --> B["Prompt v1 freeze"]
+        B --> C["Dev evaluation"]
+        C --> D["Failure analysis"]
+        D --> E["Prompt v2 minimal revision"]
+        E --> F["Owner approval / freeze"]
+        F --> G["Formal Holdout pair"]
+        G --> H["Deterministic Rules + Blind Grader"]
+        H --> I["Human Review / corrective re-review"]
+        I --> J["Paired Comparison"]
+        J --> K["Owner Recommendation<br/>Prompt v2 recommended<br/>Confidence: Moderate"]
+        D -. "Dev evidence drives Prompt revision" .-> E
+        G -. "Holdout is not used for tuning" .-> E
+        I -. "does not overwrite calculated_status" .-> H
+    end
+
+    subgraph local["Local architecture"]
+        UI["Streamlit UI"] --> APP["Application Services"]
+        APP --> DOMAIN["Domain"]
+        APP --> IMPORTS["Imports"]
+        APP --> REPOS["Repositories"]
+        DOMAIN --> REPOS
+        IMPORTS --> REPOS
+        REPOS --> SQLITE["SQLite"]
+    end
+
+    subgraph external["External roles"]
+        GENERATOR["ChatGPT Web / GPT-5.6 Sol<br/>Formal Generator"]
+        GRADER["DeepSeek Web / Condition 2<br/>Blind Semantic Grader"]
+        OWNER["Owner<br/>Approval / Freeze / Human Review / Final Recommendation"]
+        CODEX["Codex<br/>Development / Engineering only"]
+        SUBAGENTS["Codex subagents<br/>Development methodology only;<br/>not product runtime Agent orchestration"]
+    end
+
+    GENERATOR -. "manual generation" .-> C
+    GRADER -. "pointwise blind grading" .-> H
+    OWNER -. "gates and recommendation" .-> F
+    OWNER -. "human decisions" .-> I
+    CODEX -. "builds and audits" .-> APP
+    SUBAGENTS -. "implementation method" .-> CODEX
+```
+
 ## 为什么做这个项目 / Why this project
 
 一次输出“看起来更好”并不能证明 Prompt 改动有效。项目把 Task Pack、Case Set、
